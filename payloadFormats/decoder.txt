@@ -1,0 +1,36 @@
+function Decoder(bytes, port) {
+  var CO2=(bytes[0]<<8)|bytes[1];
+  var CO=(bytes[2]<<8)|bytes[3];
+  var turbidity=(bytes[4]<<8)|bytes[5];
+  if(bytes.length==9||bytes.length==10){
+      return {
+    Carbondi: CO2,
+    CArbonmono: CO,
+    Turbi: turbidity,
+    counter: (bytes[6]<<8)|bytes[7],
+    signature: (bytes[8]<<8)|bytes[9],
+    }
+  }else if(bytes.length==24){
+    var s= [];
+    var n=0;
+    for(var i=0;i<8*2;i+=2){
+      s[n++]= (bytes[8+i]<<8)|bytes[8+i+1];
+    }
+    return {
+      Carbondi: CO2,
+      CArbonmono: CO,
+      Turbi: turbidity,
+      counter: (bytes[6]<<8)|bytes[7],
+      signature: s
+      }
+  }else{
+    var pK= [];
+    var n=0;
+    for(var i=0;i<bytes.length;i+=1){
+      pK[i]= 0+(bytes[i])
+    }
+    return {
+      publicKey: pK
+      }
+  }
+}
