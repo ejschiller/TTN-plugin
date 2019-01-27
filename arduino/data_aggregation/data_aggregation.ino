@@ -9,6 +9,8 @@
 //#include <credentials.h>
 #include "MQ135.h"
 #include <Ed25519.h>
+#include <EEPROM.h>
+ 
 
 //STATES
 const int SEND_PUBKEY = 0;
@@ -34,7 +36,7 @@ uint16_t counterValues=0;                //Counter for total value that are goin
 uint8_t counterValuesToSend=0;          //Counter for values that are going to be sent each time
 uint8_t counterPayloads = 0;
 
-const uint8_t packets = 50;
+const uint8_t packets = 2;
 const uint8_t maxByteToSend = 4;       //Max values that are going to be sent eacht time
 const int sizeDataSigned = maxByteToSend*packets; //At best it would be a multiple of 51, max size of data signed
 byte data[sizeDataSigned];              //singed data
@@ -99,7 +101,7 @@ void collectData(){
         toSend[counterValuesToSend] = counterPayloads>>8;
         toSend[counterValuesToSend+1] = counterPayloads & 0xFF;
         
-        os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
+        os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);
     }else{
           os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);
       }
@@ -120,7 +122,7 @@ void sendData(){
 void signData(){
     Ed25519::sign(signature, privateKey, publicKey, data, sizeof(data));
     STATE = SEND_SIGNATURE;
-    os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(1), do_send);
+    os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);
 
 }
 
@@ -138,7 +140,7 @@ void resetDataToSend(){
     memset(toSend, 0, sizeof(toSend));
     counterValuesToSend = 0;
     STATE = COLLECT_DATA;
-    os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(1), do_send);
+    os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);
 
 }
 
@@ -151,7 +153,7 @@ void resetAllData(){
 
     STATE = COLLECT_DATA;
 
-    os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(1), do_send);
+    os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);
 
 }
 
@@ -198,6 +200,10 @@ void onEvent (ev_t ev) {
         if (LMIC.txrxFlags & TXRX_ACK) {
             Serial.println(F("Received ack"));
         }
+        if( ( LMIC.txrxFlags & ( TXRX_DNW1 | TXRX_DNW2 ) ) != 0 )
+      {
+        Serial.println("Received something");
+      }
         if (LMIC.dataLen) {
             Serial.print(F("Received "));
             Serial.print(LMIC.dataLen);
@@ -240,7 +246,7 @@ void onEvent (ev_t ev) {
                 STATE = RESET_ALL_DATA;
             }
         }
-        os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(1), do_send);
+        os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
     } else {
         //Serial.println(ev);
     }
@@ -251,10 +257,24 @@ void setup() {
     Serial.println(F("Starting..."));
 
     STATE = SEND_PUBKEY;
-    //Generate a private key and derive a public one, this is done EVERY time at start up
-    Ed25519::generatePrivateKey(privateKey);
-    Ed25519::derivePublicKey(publicKey, privateKey);
+    //Check if private Key is already stored, if not generate one
+    if(EEPROM.read ( 0 )==0 && EEPROM.read ( 1 ) == 0 ){
+        Serial.println("NO PRIVATE KEY FOUND, GENERATING ONE...");
+        Ed25519::generatePrivateKey(privateKey);
+        for ( int i = 0; i < 32; ++i ){
+          EEPROM.write ( i, privateKey [ i ] );
+        }
+     }else{
+        Serial.println("PRIVATE KEY FOUND");
+          for (int i = 0; i < 32; ++i ){
+            privateKey[i] = EEPROM.read ( i );
+          }
+      }
 
+      //Derive the public key from the private key
+      Ed25519::derivePublicKey(publicKey, privateKey);
+
+    
     // LMIC init
     os_init();
 
@@ -268,11 +288,12 @@ void setup() {
     LMIC_setLinkCheckMode(0);
 
     // TTN uses SF9 for its RX2 window.
-    LMIC.dn2Dr = DR_SF9;
+    LMIC.dn2Dr = DR_SF12;
+    //LMIC_setClockError(MAX_CLOCK_ERROR * 500 / 100);
+
 
     // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
     LMIC_setDrTxpow(DR_SF7, 14);
-
     // Start job
     do_send(&sendjob);
 }

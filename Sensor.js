@@ -47,6 +47,7 @@ class Sensor{
     }
 
     set publicKey(value) {
+        this.resetParameters();
         this._publicKey = value;
     }
 
