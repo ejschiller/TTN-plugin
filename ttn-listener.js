@@ -48,7 +48,6 @@ ttn.data(appID, accessKey)
                     //packet already received, send only ACK
                     console.log(`[${devID}] data already received ${counter}`);
                     sendAck(client, devID, counter);
-                    duplicates++;
                 }else {
                     sensor.packetReceived[counter] = true;
                     sensor.counter = sensor.counter++;
