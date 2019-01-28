@@ -10,51 +10,54 @@ var accessKey = process.env.accessKey ? process.env.accessKey : "ttn-account-v2.
 var sensors = new Map();
 
 
-function sendAck(client, devID, message){
+function sendAck(client, devID, message) {
     const buf = Buffer.alloc(2);
-    buf.writeInt8(message,0);
+    buf.writeInt8(message, 0);
     client.send(devID, buf, 1);
 }
+
 ttn.data(appID, accessKey)
-    //Start listening for incoming packet
+//Start listening for incoming packet
     .then(function (client) {
         client.on("uplink", function (devID, payload) {
             var sensor = sensors.get(devID);
 
             //sensor does not exist yet
-            if(!sensor){
-               sensor = new Sensor(devID);
-               sensors.set(devID,sensor);
+            if (!sensor) {
+                sensor = new Sensor(devID);
+                sensors.set(devID, sensor);
             }
 
-            if(!payload['payload_raw']){return};
+            if (!payload['payload_raw']) {
+                return
+            }
             var payloadTmp = payload['payload_raw'];
-            if(payloadTmp.length === 32){
+            if (payloadTmp.length === 32) {
                 sensor.publicKey = tou8(payloadTmp);
-                console.log(`[${devID}]`, 'received publicKey',sensor.publicKey.slice(0,5));
+                console.log(`[${devID}]`, 'received publicKey', sensor.publicKey.slice(0, 5));
                 sendAck(client, devID, 9)
             }
-            else if(payloadTmp.length === 64){
+            else if (payloadTmp.length === 64) {
                 sensor.signature = tou8(payloadTmp);
-                console.log(`[${devID}]`, 'received signature',sensor.signature.slice(0,5));
+                console.log(`[${devID}]`, 'received signature', sensor.signature.slice(0, 5));
                 sendAck(client, devID, 8);
                 sensor.verifyData();
                 sensor.resetParameters();
 
-            }else{
+            } else {
                 const counter = parseInt(payload['payload_fields']['counter']);
                 var packetReceived = sensor.packetReceived;
-                if(!!packetReceived[counter]){
+                if (!!packetReceived[counter]) {
                     //packet already received, send only ACK
                     console.log(`[${devID}] data already received ${counter}`);
                     sendAck(client, devID, counter);
-                }else {
+                } else {
                     sensor.packetReceived[counter] = true;
                     sensor.counter = sensor.counter++;
                     var len = payloadTmp.length;
 
                     //remove the counter from the buffer
-                    payloadTmp = payloadTmp.slice(0,len-2);
+                    payloadTmp = payloadTmp.slice(0, len - 2);
                     if (!sensor.data) {
                         sensor.data = payloadTmp;
                         console.log(`[${devID}]`, 'received first data of size ', sensor.data.length);

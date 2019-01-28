@@ -288,7 +288,7 @@ void setup() {
     LMIC_setLinkCheckMode(0);
 
     // TTN uses SF9 for its RX2 window.
-    LMIC.dn2Dr = DR_SF12;
+    LMIC.dn2Dr = DR_SF9;
     //LMIC_setClockError(MAX_CLOCK_ERROR * 500 / 100);
 
 

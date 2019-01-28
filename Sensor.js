@@ -1,8 +1,8 @@
 var ed25519 = require('ed25519');
 
-class Sensor{
+class Sensor {
 
-    constructor(devId){
+    constructor(devId) {
         this._publicKey = null;
         this._signature = null;
         this._counter = 0;
@@ -12,12 +12,12 @@ class Sensor{
 
     }
 
-    print(){
+    print() {
         console.log(this._devId, this._publicKey, this._signature);
     }
 
-    verifyData(){
-        if(!!this.data&&!!this.signature&&!!this.publicKey) {
+    verifyData() {
+        if (!!this.data && !!this.signature && !!this.publicKey) {
             if (ed25519.Verify(this.data, this.signature, this.publicKey)) {
                 console.log(`[${this.devId}] signature is valid`);
             } else {
@@ -26,7 +26,7 @@ class Sensor{
         }
     }
 
-    resetParameters(){
+    resetParameters() {
         console.log(`[${this.devId}] resetting parameters to default`);
         this._signature = null;
         this._counter = 0;
