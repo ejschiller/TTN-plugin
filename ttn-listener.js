@@ -20,6 +20,12 @@ ttn.data(appID, accessKey)
 //Start listening for incoming packet
     .then(function (client) {
         client.on("uplink", function (devID, payload) {
+
+            const {payload_raw} = payload;
+            if (!payload_raw) {
+                return;
+            }
+
             var sensor = sensors.get(devID);
 
             //sensor does not exist yet
@@ -28,25 +34,23 @@ ttn.data(appID, accessKey)
                 sensors.set(devID, sensor);
             }
 
-            if (!payload['payload_raw']) {
-                return
-            }
-            var payloadTmp = payload['payload_raw'];
-            if (payloadTmp.length === 32) {
-                sensor.publicKey = tou8(payloadTmp);
+
+            if (payload_raw.length === 32) {
+                sensor.publicKey = tou8(payload_raw);
                 console.log(`[${devID}]`, 'received publicKey', sensor.publicKey.slice(0, 5));
                 sendAck(client, devID, 9)
             }
-            else if (payloadTmp.length === 64) {
-                sensor.signature = tou8(payloadTmp);
+            else if (payload_raw.length === 64) {
+                sensor.signature = tou8(payload_raw);
                 console.log(`[${devID}]`, 'received signature', sensor.signature.slice(0, 5));
                 sendAck(client, devID, 8);
                 sensor.verifyData();
                 sensor.resetParameters();
 
             } else {
-                const counter = parseInt(payload['payload_fields']['counter']);
-                var packetReceived = sensor.packetReceived;
+                const {payload_fields: {counter}} = payload;
+                const {packetReceived} = sensor;
+
                 if (!!packetReceived[counter]) {
                     //packet already received, send only ACK
                     console.log(`[${devID}] data already received ${counter}`);
@@ -54,18 +58,18 @@ ttn.data(appID, accessKey)
                 } else {
                     sensor.packetReceived[counter] = true;
                     sensor.counter = sensor.counter++;
-                    var len = payloadTmp.length;
+                    var len = payload_raw.length;
 
                     //remove the counter from the buffer
-                    payloadTmp = payloadTmp.slice(0, len - 2);
+                    payloadTmp = payload_raw.slice(0, len - 2);
                     if (!sensor.data) {
                         sensor.data = payloadTmp;
                         console.log(`[${devID}]`, 'received first data of size ', sensor.data.length);
                     } else {
-                        sensor.data = Buffer.concat([sensor.data, payloadTmp])
+                        sensor.data = Buffer.concat([sensor.data, payloadTmp]);
                         console.log(`[${devID}]`, `received data #${counter} of size`, sensor.data.length);
                     }
-                    sendAck(client, devID, counter)
+                    sendAck(client, devID, counter);
                 }
             }
         })
@@ -81,4 +85,4 @@ ttn.data(appID, accessKey)
     })
 
 
-console.log("Listening...")
+console.log("Listening to LoRa nodes from TTN...")
