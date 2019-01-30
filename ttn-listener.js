@@ -89,7 +89,7 @@ ttn.data(appID, accessKey)
 
                     }
                     sendAck(client, devID, counter);
-                    sensor.log('info', `[${time}] ${devID} received packet #${counter} with data: ${payloadTmp.toString('hex')}, size: ${payloadTmp.length} datarate: ${data_rate}, airtime: ${airtime}, gateways: ${gateways.length}`)
+                    sensor.log('info', `[${time}] ${devID} received packet #${counter} with data: ${payloadTmp.toString('hex')}, size: ${payloadTmp.length}, datarate: ${data_rate}, airtime: ${airtime}, gateways: ${gateways.length}`)
 
                 }
             }
