@@ -40,7 +40,10 @@ ttn.data(appID, accessKey)
             logger.log('info', JSON.stringify(payload))
             var sensor = sensors.get(devID);
             const {metadata: {time,data_rate, airtime, gateways}} = payload;
-
+            var numberGateways = 0;
+            if(!!gateways){
+                numberGateways = gateways.length
+            }
             //sensor does not exist yet
             if (!sensor) {
                 sensor = new Sensor(devID);
@@ -52,13 +55,13 @@ ttn.data(appID, accessKey)
                 sensor.publicKey = tou8(payload_raw);
                 //console.log(`[${devID}]`, 'received publicKey', sensor.publicKey.slice(0, 5));
                 sendAck(client, devID, 9)
-                sensor.log('info', `[${time}] ${devID} received publicKey [${sensor.publicKey.slice(0, 5).toString()}], datarate: ${data_rate}, airtime: ${airtime}, gateways: ${gateways.length}`)
+                sensor.log('info', `[${time}] ${devID} received publicKey [${sensor.publicKey.slice(0, 5).toString()}], datarate: ${data_rate}, airtime: ${airtime}, gateways: ${numberGateways}`)
             }
             else if (payload_raw.length === 64) {
                 sensor.signature = tou8(payload_raw);
                 // console.log(`[${devID}]`, 'received signature', sensor.signature.slice(0, 5));
                 sendAck(client, devID, 8);
-                sensor.log('info', `[${time}] ${devID} received signature [${sensor.signature.slice(0, 5).toString()}], datarate: ${data_rate}, airtime: ${airtime}, gateways: ${gateways.length}`)
+                sensor.log('info', `[${time}] ${devID} received signature [${sensor.signature.slice(0, 5).toString()}], datarate: ${data_rate}, airtime: ${airtime}, gateways: ${numberGateways}`)
 
                 sensor.verifyData();
 
@@ -70,7 +73,7 @@ ttn.data(appID, accessKey)
                     //packet already received, send only ACK
                     // console.log(`[${devID}] data already received ${counter}`);
                     sendAck(client, devID, counter);
-                    sensor.log('info', `[${time}] ${devID} received existing data #${counter.toString()}, datarate: ${data_rate}, airtime: ${airtime}, gateways: ${gateways.length}`)
+                    sensor.log('info', `[${time}] ${devID} received existing data #${counter.toString()}, datarate: ${data_rate}, airtime: ${airtime}, gateways: ${numberGateways}`)
 
                 } else {
                     sensor.packetReceived[counter] = true;
@@ -89,7 +92,7 @@ ttn.data(appID, accessKey)
 
                     }
                     sendAck(client, devID, counter);
-                    sensor.log('info', `[${time}] ${devID} received packet #${counter} with data: ${payloadTmp.toString('hex')}, size: ${payloadTmp.length}, datarate: ${data_rate}, airtime: ${airtime}, gateways: ${gateways.length}`)
+                    sensor.log('info', `[${time}] ${devID} received packet #${counter} with data: ${payloadTmp.toString('hex')}, size: ${payloadTmp.length}, datarate: ${data_rate}, airtime: ${airtime}, gateways: ${numberGateways}`)
 
                 }
             }

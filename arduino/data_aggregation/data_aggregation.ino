@@ -36,8 +36,8 @@ uint16_t counterValues=0;                //Counter for total value that are goin
 uint8_t counterValuesToSend=0;          //Counter for values that are going to be sent each time
 uint8_t counterPayloads = 0;
 
-const uint8_t packets = 2;
-const uint8_t maxByteToSend = 4;       //Max values that are going to be sent eacht time
+const uint8_t packets = 10;
+const uint8_t maxByteToSend = 40;       //Max values that are going to be sent eacht time
 const int sizeDataSigned = maxByteToSend*packets; //At best it would be a multiple of 51, max size of data signed
 byte data[sizeDataSigned];              //singed data
 byte toSend[maxByteToSend+2];             //data sent each time
@@ -151,7 +151,7 @@ void resetAllData(){
     counterValues = 0;
     counterPayloads = 0;
 
-    STATE = COLLECT_DATA;
+    STATE = SEND_PUBKEY;
 
     os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);
 
