@@ -14,6 +14,7 @@
     "ed25519-supercop": "^1.2.0",
     "mqtt-connection": "^4.0.0",
     "object-sizeof": "^1.3.0",
-    "ttn": "^2.3.1"
+    "ttn": "^2.3.1",
+    "winston": "^3.2.1"
   }
 }

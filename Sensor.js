@@ -1,4 +1,7 @@
 var ed25519 = require('ed25519');
+let winston = require('winston');
+
+
 
 class Sensor {
 
@@ -10,20 +13,42 @@ class Sensor {
         this._packetReceived = [];
         this._devId = devId;
 
+        this.logger = winston.createLogger({
+            level: 'info',
+            format: winston.format.combine(
+                winston.format.timestamp(),
+                winston.format.printf(info => {
+                    return `${info.timestamp} ${info.level}: ${info.message}`;
+                })
+            ),
+            transports: [new winston.transports.Console(),
+                new winston.transports.File({filename: `log/${devId}.log`})]
+        });
+
     }
 
     print() {
         console.log(this._devId, this._publicKey, this._signature);
     }
 
+    log(info, message){
+        this.logger.log(info,message);
+    }
+
     verifyData() {
         if (!!this.data && !!this.signature && !!this.publicKey) {
             if (ed25519.Verify(this.data, this.signature, this.publicKey)) {
-                console.log(`[${this.devId}] signature is valid`);
+                // console.log(`[${this.devId}] signature is valid`);
+                this.log('info', `${this.devId} signature is valid  publicKey: [${this.publicKey.toString()}], signature: [${this.signature}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
+
             } else {
-                console.log(`[${this.devId}] signature is NOT valid`);
+                // console.log(`[${this.devId}] signature is NOT valid`);
+                this.log('info', `${this.devId} signature is NOT valid  publicKey: [${this.publicKey.toString()}], signature: [${this.signature}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
+
             }
         }
+        this.resetParameters();
+
     }
 
     resetParameters() {
