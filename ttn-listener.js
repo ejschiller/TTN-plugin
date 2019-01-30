@@ -23,9 +23,13 @@ var sensors = new Map();
 
 
 function sendAck(client, devID, message) {
-    const buf = Buffer.alloc(2);
-    buf.writeInt8(message, 0);
-    client.send(devID, buf, 1);
+    try {
+        const buf = Buffer.alloc(2);
+        buf.writeInt8(message, 0);
+        client.send(devID, buf, 1);}
+    catch (e) {
+        logger.log('error', e)
+    }
 }
 
 ttn.data(appID, accessKey)
