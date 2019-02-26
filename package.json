@@ -9,10 +9,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "base-64": "^0.1.0",
     "buffer-to-uint8array": "^1.1.0",
     "ed25519": "0.0.4",
     "ed25519-supercop": "^1.2.0",
     "mqtt-connection": "^4.0.0",
+    "node-fetch": "^2.3.0",
     "object-sizeof": "^1.3.0",
     "ttn": "^2.3.1",
     "winston": "^3.2.1"
