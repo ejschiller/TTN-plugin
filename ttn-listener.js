@@ -31,7 +31,6 @@ let logger = winston.createLogger({
         new winston.transports.File({filename: `log/ALL.log`})]
 });
 
-bc.createNewAccount(null)
 
 const sensors = new Map();
 
@@ -201,5 +200,7 @@ sen.signature = s;
 
 setTimeout(() => {
     console.log("send data to BC")
-    bc.sendData(sen)
+    //bc.sendData(sen)
+    //bc.createNewAccount(sen)
+    //bc.sendFunds(sen,200)
 }, 1000)
