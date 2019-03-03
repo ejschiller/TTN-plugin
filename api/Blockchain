@@ -1,0 +1,47 @@
+const BLOCKCHAIN_CLIENT_IP ='http://192.168.0.161:8010'
+const WALLET = 'WalletA.txt'
+const fs = require('fs')
+
+
+class Blockchain{
+    constructor(){}
+    sendData(sensor) {
+        body = {
+            DevId: sensor.devId,
+            PublicKey: [...sensor.publicKey],
+            Data: [...sensor.data],
+            Signature: [...sensor.signature],
+            txCnt: sensor.txCnt,
+        }
+        ;
+        // console.log(body)
+        fetch(`${BLOCKCHAIN_CLIENT_IP}/verify`, {
+            method: 'post',
+            body: JSON.stringify(body),
+            headers: {'Content-Type': 'application/json'},
+        })
+        //.then(res => res.json())
+            .then(() => {
+                process.exit(1)
+
+            });
+    }
+
+    createNewAccount(sensor){
+        let that = this;
+        fs.readFile(WALLET, (err, data) => {
+            if (err) throw err;
+            console.log(parseInt(that.getPrivKeyFromFile(data),16))
+            console.log(data)
+        })
+        console.log(sensor)
+    }
+
+    getPrivKeyFromFile(data){
+        const keys = data.toString().split('\n')
+        console.log(keys)
+        return keys[1]+keys[2];
+    }
+}
+
+module.exports = Blockchain;

@@ -12,6 +12,8 @@ class Sensor {
         this._data = null;
         this._packetReceived = [];
         this._devId = devId;
+        this._txCnt = 0;
+        this._walletCreated = false;
 
         this.logger = winston.createLogger({
             level: 'info',
@@ -37,8 +39,7 @@ class Sensor {
 
     verifyData() {
         if (!!this.data && !!this.signature && !!this.publicKey) {
-            if (ed25519.Verify(this.data, this.signature, this.publicKey)) {
-                // console.log(`[${this.devId}] signature is valid`);
+            if (isValid = ed25519.Verify(this.data, this.signature, this.publicKey)) {
                 this.log('info', `${this.devId} signature is valid  publicKey: [${this.publicKey.toString()}], signature: [${this.signature}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
 
             } else {
@@ -48,6 +49,7 @@ class Sensor {
             }
         }
         this.resetParameters();
+        return isValid;
 
     }
 
@@ -106,6 +108,22 @@ class Sensor {
 
     set counter(value) {
         this._counter = value;
+    }
+
+    get txCnt() {
+        return this._txCnt;
+    }
+
+    set txCnt(value) {
+        this._txCnt = value;
+    }
+
+    get walletCreated() {
+        return this._walletCreated;
+    }
+
+    set walletCreated(value) {
+        this._walletCreated = value;
     }
 }
 
