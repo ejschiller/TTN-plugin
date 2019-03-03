@@ -11,7 +11,6 @@ const tou8 = require('buffer-to-uint8array');
 
 class Blockchain {
     constructor() {
-        this.wallet = null;
         this.getPrivKey = async () => {
             const data = await readFile(WALLET);
             return this.getPrivKeyFromFile(data)
@@ -36,7 +35,6 @@ class Blockchain {
         })
         //.then(res => res.json())
             .then(() => {
-                process.exit(1)
 
             });
     }
@@ -65,7 +63,6 @@ class Blockchain {
 
     async createNewAccount(sensor) {
         const privKey = await this.getPrivKey();
-        this.wallet = privKey;
         const pubKey = this.getPubKeyFromPrivKey(privKey);
         let txHash;
         const body = {

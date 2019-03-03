@@ -4,6 +4,8 @@ const Buffer = require('buffer').Buffer;
 const winston = require('winston');
 const fetch = require('node-fetch');
 const base64 = require('base-64');
+var ed25519 = require('ed25519');
+
 
 const Sensor = require('./Sensor');
 const Blockchain = require('./api/Blockchain');
@@ -194,13 +196,41 @@ const dataNode = new Buffer.from('0079007C007400DD0096003B008F00E500D100E8006C00
 const s = new Buffer.from('6CDB7CF0C9784E02709C7EA92137F8E32C87E8FF820DC9637EDBDB4435B55BF80618A6C6F4023497F17082B774710E3D1D3B6F0AB26458EAB61189A383BCBA06', 'HEX')
 const sen = new Sensor('prova');
 
-sen.publicKey = pK;
-sen.data = dataNode;
-sen.signature = s;
+//TEST
+let number = Buffer.from([Math.random()*10000,Math.random()*10000]);
+let keypair = ed25519.MakeKeypair(pK)
+let signature = ed25519.Sign(number, keypair)
+console.log(ed25519.Verify(number, signature, keypair.publicKey))
+sen.publicKey = keypair.publicKey;
+sen.data = number
+sen.signature = signature;
+sen.txCnt=0
 
-setTimeout(() => {
-    console.log("send data to BC")
-    //bc.sendData(sen)
-    //bc.createNewAccount(sen)
-    //bc.sendFunds(sen,200)
-}, 1000)
+
+async function test(){
+    for (let i = 1; i < 10; i++) {
+        await sleep(5)
+
+        console.log("send data to BC "+sen.txCnt)
+        bc.sendData(sen)
+        sen.txCnt = sen.txCnt + 1;
+        number = Buffer.from([Math.random()*10000,Math.random()*10000,Math.random()*10000,Math.random()*10000,Math.random()*10000]);
+        keypair = ed25519.MakeKeypair(pK)
+        signature = ed25519.Sign(number, keypair)
+
+        sen.publicKey = keypair.publicKey;
+        sen.data = number
+        sen.signature = signature;
+
+
+        //bc.createNewAccount(sen)
+        //bc.sendFunds(sen,500)
+
+    }
+}
+test();
+
+async function sleep(ms){
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
