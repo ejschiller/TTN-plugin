@@ -152,7 +152,7 @@ function saveSignature(sensor, sensorTmp, counter) {
         sensor.signature = Buffer.concat([sensor.signature, sensorTmp.payloadTmp]);
         sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received signature2 [${sensor.signature.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
     } else {
-        sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} INVALID SIGNATURE COUNTER [${sensor.signature.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
+        sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} INVALID SIGNATURE COUNTER `);
     }
 
 }
@@ -217,7 +217,6 @@ sen.txCnt=2
 
 //10 packets of 40 each
 //160 seconds delay between packets
-
 async function test(){
     for (let i = 1; i < 10; i++) {
 
@@ -238,7 +237,6 @@ async function test(){
     }
 }
 //test();
-
 async function sleep(ms){
     return new Promise(resolve => setTimeout(resolve, ms));
 }
