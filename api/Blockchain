@@ -1,4 +1,4 @@
-const BLOCKCHAIN_CLIENT_IP = 'http://192.168.0.161:8010'
+const BLOCKCHAIN_CLIENT_IP = 'http://localhost:8010'
 const WALLET = 'WalletA.txt'
 const fs = require('fs')
 const Buffer = require('buffer').Buffer;
@@ -69,6 +69,7 @@ class Blockchain {
                 DevId: sensor.devId,
                 PublicKey: [...sensor.publicKey],
                 Issuer: [...pubKey],
+                Fee: 200,
                 txCnt: sensor.txCnt,
             }
         ;

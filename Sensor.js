@@ -38,13 +38,15 @@ class Sensor {
     }
 
     verifyData() {
+        let isValid;
         if (!!this.data && !!this.signature && !!this.publicKey) {
-            if (isValid = ed25519.Verify(this.data, this.signature, this.publicKey)) {
-                this.log('info', `${this.devId} signature is valid  publicKey: [${this.publicKey.toString()}], signature: [${this.signature}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
+            isValid = ed25519.Verify(this.data, this.signature, this.publicKey);
+            if (isValid) {
+                this.log('info', `${this.devId} signature is valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
 
             } else {
                 // console.log(`[${this.devId}] signature is NOT valid`);
-                this.log('info', `${this.devId} signature is NOT valid  publicKey: [${this.publicKey.toString()}], signature: [${this.signature}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
+                this.log('info', `${this.devId} signature is NOT valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
 
             }
         }

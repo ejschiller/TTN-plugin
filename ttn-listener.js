@@ -56,7 +56,9 @@ ttn.data(appID, accessKey)
                 sensors.set(devID, sensor);
             }
             //Extract the counter or the flag to recognize what kind of data is received
-            const {payload_fields: {counter}} = payload;
+            //const {payload_fields: {counter}} = payload;
+            const counter = DecoderCounter(payload_raw)
+
             sendAck(client, devID, counter);
 
             const {metadata: {time, data_rate, airtime, gateways}} = payload;
@@ -67,7 +69,6 @@ ttn.data(appID, accessKey)
             //remove the counter from the buffer
             const len = payload_raw.length;
             payloadTmp = payload_raw.slice(0, len - 2);
-
             const sensorTmp = {
                 payloadTmp,
                 counter,
@@ -83,7 +84,7 @@ ttn.data(appID, accessKey)
                 if (counter === PUBLICKEY) {
                     savePublicKey(sensor, sensorTmp);
                     if(!sensor.walletCreated){
-                        bc.createNewAccount(sensor);
+                        //bc.createNewAccount(sensor);
                     }
                 }
                 else if (counter === SIGNATURE_1) {
@@ -92,7 +93,7 @@ ttn.data(appID, accessKey)
                 else if (counter === SIGNATURE_2) {
                     saveSignature(sensor, sensorTmp, SIGNATURE_2);
                     if (sensor.verifyData()) {
-                        bc.sendData(sensor);
+                        //bc.sendData(sensor);
                     }
                 }
                 else {
@@ -139,16 +140,20 @@ function sendAck(client, devID, message) {
 
 function savePublicKey(sensor, sensorTmp) {
     sensor.publicKey = tou8(sensorTmp.payloadTmp);
-    sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received publicKey [${sensor.publicKey.slice(0, 5).toString()}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
+    sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received publicKey [${sensor.publicKey.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
 }
 
 function saveSignature(sensor, sensorTmp, counter) {
     if (counter === SIGNATURE_1) {
         sensor.signature = tou8(sensorTmp.payloadTmp);
-    } else {
+        sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received signature1 [${sensor.signature.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
+
+    } else if (counter === SIGNATURE_2 && !!sensor.signature && sensor.signature.length == 32) {
         sensor.signature = Buffer.concat([sensor.signature, sensorTmp.payloadTmp]);
+        sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received signature2 [${sensor.signature.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
+    } else {
+        sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} INVALID SIGNATURE COUNTER [${sensor.signature.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
     }
-    sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received signature1 [${sensor.signature.slice(0, 5).toString()}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
 
 }
 
@@ -204,12 +209,17 @@ console.log(ed25519.Verify(number, signature, keypair.publicKey))
 sen.publicKey = keypair.publicKey;
 sen.data = number
 sen.signature = signature;
-sen.txCnt=0
+sen.txCnt=2
 
+//bc.createNewAccount(sen)
+//bc.sendFunds(sen,500)
+
+
+//10 packets of 40 each
+//160 seconds delay between packets
 
 async function test(){
     for (let i = 1; i < 10; i++) {
-        await sleep(5)
 
         console.log("send data to BC "+sen.txCnt)
         bc.sendData(sen)
@@ -221,16 +231,22 @@ async function test(){
         sen.publicKey = keypair.publicKey;
         sen.data = number
         sen.signature = signature;
+        await sleep(10000)
 
 
-        //bc.createNewAccount(sen)
-        //bc.sendFunds(sen,500)
 
     }
 }
-test();
+//test();
 
 async function sleep(ms){
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function DecoderCounter(bytes) {
+    var len = bytes.length
+    return bytes[len-2]<<8|bytes[len-1]
+}
+
+
+fetch("https://console.thethingsnetwork.org/api/applications/prova_gosdk/devices/my-new-devices/uplink", {"credentials":"include","headers":{"accept":"application/json","accept-language":"it,de;q=0.9,en;q=0.8,sr;q=0.7","authorization":"Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1YmQ0MzZjNjc0MDMwMjAwNDg3MjM5OTUiLCJpc3MiOiJ0dG4tYWNjb3VudC12MiIsImlhdCI6MTU1MTcwMzg3NCwidHlwZSI6InVzZXIiLCJjbGllbnQiOiJ0dG4tY29uc29sZSIsInNjb3BlIjpbImFwcHMiLCJnYXRld2F5cyIsInByb2ZpbGUiLCJjbGllbnRzIl0sImludGVyY2hhbmdlYWJsZSI6dHJ1ZSwidXNlcm5hbWUiOiJpbGVjaXBpIiwiZW1haWwiOiJpbGUuY2VwaWxvdkB1emguY2giLCJjcmVhdGVkIjoiMjAxOC0xMC0yN1QwOTo1ODozMC4yNDZaIiwidmFsaWQiOnRydWUsIl9pZCI6IjViZDQzNmM2NzQwMzAyMDA0ODcyMzk5NSIsImV4cCI6MTU1MTcwNzUzNH0.JGqBfoYnsljhjyJNNA5whxQtE29VryFntY7bELLPF6Imr5tC8e0HJGeIlUGG1TgiLrtOnpci2Fd9aQwV0dDSLT7GvFZUenOJZYB1rZmOP0pnMRpwYHG6nlvfGazukyH3iSx9WE_Au8_HR-9nQrDwbRcvrOeu0fC-T3mLGnA_S0M5irRZ1tpiuPWepzrbfnoOcQk2kSbYHIKl4ISv_V36fd_SNNaW1jlaxOcusyc1kAtEtY2E0bH3cOlSY8cJ2vDsntOGTkxoWvaUGfe3ByFiS9VeKb-5pN0SLgZFTKfWMwsWylHGgzcizB65tlZ_vaVU583llLC8OEMIXr2rMz0ZD-E98CyUl87SYZNJxP_Jp8pd4LgqmcnOnifI3Rc_CpCrdSV1YH6a6_Lhf1tSH2IDLYwlowd45C4-ywplEJ8ZttEsHKCNwI5LAPgB8ZNzWFPK5CN5Lq4NbrTycNWpVV-RruOSKMdp8nujburpuuJgG27rINAzWQbqRuOMAPMnXgiTFrkO_Gf4FUErvS8toRYGT3Y3UeSVcwSpWleGJdh1PJTiZ7agN2F2MftedQuVGPnNVpPU0BtltjY88KddQmBQQ5HWI54-d2ZryBy5pJNgJfXCv16OwoiEtDqdkSwx74v5mUFDown80Je1NYW-vsry3xlPdE6rNgGgdvK6Ei4Fis0","content-type":"application/json","x-version":"v2.6.11"},"referrer":"https://console.thethingsnetwork.org/applications/prova_gosdk/devices/my-new-devices","referrerPolicy":"strict-origin-when-cross-origin","body":"{\"fport\":1,\"payload\":\"00EF001800590072003E0006004000310072009D0084009F00D3007B00A100BC00B4007A0031000B0002\"}","method":"POST","mode":"cors"});

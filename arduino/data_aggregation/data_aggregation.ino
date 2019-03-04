@@ -20,9 +20,9 @@ const int COLLECT_DATA = 3;
 const int RESET_ALL_DATA = 4;
 const int RESET_DATA_TO_SEND = 5;
 const int SEND_SIGNATURE = 8;
+const int SEND_SIGN_2 = 9;
 
-const int ACK_PUBKEY = 9;
-const int ACK_SIGNATURE = 8;
+
 
 int STATE;
 
@@ -36,14 +36,19 @@ uint16_t counterValues=0;                //Counter for total value that are goin
 uint8_t counterValuesToSend=0;          //Counter for values that are going to be sent each time
 uint8_t counterPayloads = 0;
 
-const uint8_t packets = 10;
-const uint8_t maxByteToSend = 40;       //Max values that are going to be sent eacht time
+const uint8_t packets = 2;
+const uint8_t maxByteToSend = 20;       //Max values that are going to be sent eacht time
 const int sizeDataSigned = maxByteToSend*packets; //At best it would be a multiple of 51, max size of data signed
 byte data[sizeDataSigned];              //singed data
 byte toSend[maxByteToSend+2];             //data sent each time
 
 //Ackwnowledge payload to receive
 uint8_t expectedAck = 0;
+
+//FLAGS
+const uint8_t PUB_KEY = 80;
+const uint8_t SIGN_1 = 81;
+const uint8_t SIGN_2 = 82;
 
 
 
@@ -74,11 +79,16 @@ const lmic_pinmap lmic_pins = {
 };
 
 void sendPublicKey(){
+    uint8_t publicKeyTmp[34];
+    memcpy(publicKeyTmp, publicKey, 32);
+    publicKeyTmp[32] = PUB_KEY>>8;
+    publicKeyTmp[33] = PUB_KEY & 0xFF;
+
     if (LMIC.opmode & OP_TXRXPEND) {
         Serial.println(F("OP_TXRXPEND, not sending"));
     } else {
         // Prepare upstream data transmission at the next possible time.
-        LMIC_setTxData2(1, publicKey, sizeof(publicKey), 0);
+        LMIC_setTxData2(1, publicKeyTmp, sizeof(publicKeyTmp), 0);
     }
     os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
 }
@@ -126,11 +136,27 @@ void signData(){
 }
 
 void sendSignature(){
+   uint8_t signatureTmp[34];
+
+  if(STATE == SEND_SIGNATURE){
+    for (int i = 0; i < 32; ++i ){
+            signatureTmp[i] = signature[i];
+          }
+    signatureTmp[32] = SIGN_1>>8;
+    signatureTmp[33] = SIGN_1 & 0xFF;
+    }
+  else if(STATE == SEND_SIGN_2){
+      for (int i = 32; i < 64; ++i ){
+        signatureTmp[i-32] = signature[i];
+      }
+      signatureTmp[32] = SIGN_2>>8;
+      signatureTmp[33] = SIGN_2 & 0xFF;
+    }
     if (LMIC.opmode & OP_TXRXPEND) {
         Serial.println(F("OP_TXRXPEND, not sending"));
     } else {
         // Prepare upstream data transmission at the next possible time.
-        LMIC_setTxData2(1, signature, sizeof(signature), 0);
+        LMIC_setTxData2(1, signatureTmp, sizeof(signatureTmp), 0);
     }
     os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
 }
@@ -179,6 +205,10 @@ void do_send(osjob_t* j) {
             Serial.println("SEND SIGNATURE");
             sendSignature();
             break;
+        case SEND_SIGN_2:
+            Serial.println("SEND SIGNATURE 2");
+            sendSignature();
+            break;
         case RESET_DATA_TO_SEND:
             Serial.println("RESET DATA TO SEND");
             resetDataToSend();
@@ -219,7 +249,7 @@ void onEvent (ev_t ev) {
             Serial.print("\nAck Payloads: ");Serial.println(expectedAck);
 
             //Check the ACK and set the next STATE accordingly
-            if(SEND_PUBKEY == STATE && expectedAck == ACK_PUBKEY){
+            if(SEND_PUBKEY == STATE && expectedAck == PUB_KEY){
                 Serial.println("PubKey received, next state COLLECT_DATA");
                 STATE = COLLECT_DATA;
 
@@ -239,7 +269,13 @@ void onEvent (ev_t ev) {
                 Serial.print("Size of counter values: ");Serial.println(counterValues);
                 Serial.print("Size of size data signed: ");Serial.println(sizeDataSigned);
 
-            }else if(STATE == SEND_SIGNATURE && expectedAck == ACK_SIGNATURE){
+            }else if(STATE == SEND_SIGNATURE && expectedAck == SIGN_1){
+                Serial.println("SIGN_1 received, next state SIGN_2");
+                STATE = SEND_SIGN_2;
+            }
+
+            
+            else if(STATE == SEND_SIGN_2 && expectedAck == SIGN_2){
                 Serial.println("Signature received, next state RESET_ALL_DATA");
 
                 STATE = RESET_ALL_DATA;
@@ -292,7 +328,7 @@ void setup() {
 
 
     // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
-    LMIC_setDrTxpow(DR_SF10, 14);
+    LMIC_setDrTxpow(DR_SF7, 24);
     // Start job
     do_send(&sendjob);
 }
