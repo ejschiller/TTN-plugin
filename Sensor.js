@@ -1,5 +1,10 @@
 var ed25519 = require('ed25519');
 let winston = require('winston');
+const Blockchain = require('./api/Blockchain');
+
+const bc = new Blockchain();
+const MIN_AMOUNT = 1000;
+const TIME_MINED_BLOCK = 3*60*1000
 
 
 
@@ -29,9 +34,6 @@ class Sensor {
 
     }
 
-    print() {
-        console.log(this._devId, this._publicKey, this._signature);
-    }
 
     log(info, message){
         this.logger.log(info,message);
@@ -42,10 +44,10 @@ class Sensor {
         if (!!this.data && !!this.signature && !!this.publicKey) {
             isValid = ed25519.Verify(this.data, this.signature, this.publicKey);
             if (isValid) {
+                bc.sendData(this);
                 this.log('info', `${this.devId} signature is valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
 
             } else {
-                // console.log(`[${this.devId}] signature is NOT valid`);
                 this.log('info', `${this.devId} signature is NOT valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
 
             }
@@ -127,6 +129,27 @@ class Sensor {
     set walletCreated(value) {
         this._walletCreated = value;
     }
+
+    async instantiateWallet(){
+        if(!this.walletCreated){
+            //Check if account is present in the blockchain
+           let createdInBC = await bc.isAccountCreated(this);
+
+           //if not created, instantiate a new one
+           if(!createdInBC){
+               //await bc.createNewAccount(this);
+               //await sleep(TIME_MINED_BLOCK)
+               //await bc.sendFunds(this, MIN_AMOUNT)
+           }
+           else{
+               //await bc.sendFunds(this, MIN_AMOUNT)
+               this.walletCreated = true;
+           }
+        }
+    }
 }
 
+async function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 module.exports = Sensor;
