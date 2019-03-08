@@ -93,7 +93,8 @@ ttn.data(appID, accessKey)
                 else if (counter === SIGNATURE_2) {
                     saveSignature(sensor, sensorTmp, SIGNATURE_2);
                     if (sensor.verifyData()) {
-                        //bc.sendData(sensor);
+                        console.log("SENDING DATA TO BC")
+                        bc.sendData(sensor);
                     }
                 }
                 else {
@@ -139,10 +140,10 @@ function sendAck(client, devID, message) {
 }
 
 function savePublicKey(sensor, sensorTmp) {
-    let isPubKey = !!sensor.publicKey === null
+    let isPubKey = sensor.publicKey === null;
     sensor.publicKey = tou8(sensorTmp.payloadTmp);
     if(!isPubKey){
-        sensor.instantiateWallet()
+        //sensor.instantiateWallet()
     }
     sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received publicKey [${sensor.publicKey.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
 }
@@ -250,7 +251,3 @@ function DecoderCounter(bytes) {
     return bytes[len-2]<<8|bytes[len-1]
 }
 sleep(1000)
-fetch("https://console.thethingsnetwork.org/refresh", {"credentials":"include","headers":{"accept":"application/json","accept-language":"it,de;q=0.9,en;q=0.8,sr;q=0.7","x-version":"v2.6.11"},"referrer":"https://console.thethingsnetwork.org/","referrerPolicy":"strict-origin-when-cross-origin","body":null,"method":"GET","mode":"cors"})
-.then((data)=>{
-    console.log(data)
-})

@@ -12,8 +12,10 @@ const SIGN_1 = 81;
 const SIGN_2 = 82;
 
 
-const ttn_sensors = ['arduinomega3_sf7', 'arduinomega_2', 'my-new-devices',
-    'raw', 'thethingsnode_sf7', 'thethingsuno_2']
+const ttn_sensors = ['arduinomega3_sf7'
+    //, 'arduinomega_2', 'my-new-devices',
+    //'raw', 'thethingsnode_sf7', 'thethingsuno_2'
+]
 
 const seeds = [
     'E309D2CC8073C26A3EF0B73F38B83A36762BE6E524E18388733B01702B4F60B6',
@@ -37,7 +39,7 @@ sensors.forEach((s) => {
     s['counterData'] = 0
     s['dataArray'] = []
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 1; i++) {
         let tmp = []
         for (let n = 0; n < 40; n++) {
             tmp.push(getRandomArbitrary(0, 200))
@@ -46,11 +48,11 @@ sensors.forEach((s) => {
     }
 })
 
-const seconds = 20*1000;
+const seconds = 2*1000;
 for (let s of ttn_sensors) {
     const sensor = sensors.get(s);
     sensor['send'] = async () => {
-        let random = getRandomArbitrary(10000, 100000)
+        let random = getRandomArbitrary(3000, 10000)
         await sleep(random);
         let buff = [0, PUB_KEY]
         let pubKey = Buffer.concat([sensor.keypair.publicKey, Buffer.from(buff)]);
@@ -116,14 +118,14 @@ function getRandomInt(min, max) {
 function sendUplink2(devId, payload) {
 
     fetch("https://console.thethingsnetwork.org/api/applications/prova_gosdk/devices/" + devId + "/uplink", {
-        "credentials": "include",
-        "headers":{"accept":"application/json","accept-language":"it,de;q=0.9,en;q=0.8,sr;q=0.7","authorization":"Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1YmQ0MzZjNjc0MDMwMjAwNDg3MjM5OTUiLCJpc3MiOiJ0dG4tYWNjb3VudC12MiIsImlhdCI6MTU1MTc5MDcxNSwidHlwZSI6InVzZXIiLCJjbGllbnQiOiJ0dG4tY29uc29sZSIsInNjb3BlIjpbImFwcHMiLCJnYXRld2F5cyIsInByb2ZpbGUiLCJjbGllbnRzIl0sImludGVyY2hhbmdlYWJsZSI6dHJ1ZSwidXNlcm5hbWUiOiJpbGVjaXBpIiwiZW1haWwiOiJpbGUuY2VwaWxvdkB1emguY2giLCJjcmVhdGVkIjoiMjAxOC0xMC0yN1QwOTo1ODozMC4yNDZaIiwidmFsaWQiOnRydWUsIl9pZCI6IjViZDQzNmM2NzQwMzAyMDA0ODcyMzk5NSIsImV4cCI6MTU1MTc5NDM3NX0.YIrc27C48vFD3NgI4BAq5UL07yPT7XPZyoCU8ATn0S3p1I9uiFHrTuRWCbGbzEqJ-W0r_6_42d4Py77UCG0PVwUpMDCPz02-v-dX0uKDJQ8_LqAocv2VRIuefK6u5RrWT2odpvXxALNigDvCKIik4LNZuz7lFnC8bp44RI0gVFvwj28WVfaEpk573VmPRsn8kzq7jbDxrgVVu5VOUXtxhhQElFpBUcLahDlkpKt4EKaZ34j6bzEHOcdJ2z6rNFB-qJoakOwH1tmgg5dCixARf1eDnVLbcmjw5icMBX2TXadTKQupFRL6pZ-f66PXo7nMQFpb91V_HDTjIpmQpGUTgaExa4u1_OVBLcTCbMU0dxg7OdFJMcskjZs2QZsi7UeGJ4G_l-rB80UHfq-GfZ8CLPqvIwKfkMXz8ySYMMPay9-HU9kCbIcH6OAOUmSC91sp04SddQmooOz6Ov7oW-AEMa7bTdVAT7dUuqf8gM50EOZ0cBShIwS8RNWMnX3yTkvrg1Jitvn6DKloJz_KEKavZDAIXS1WTA7oC8Jjo9XsLjPX_h7Kz_JOg90OcwPz170D9SQPSwQYWF6fT18gg9vS99KZABRzW-1GrqNjhXuocKBlEfkMnbaZga5AxdiUkUmhh5-JOeo0VjpnVrH93U8hvWbPYjEezWiGkeGyaykXEK4","content-type":"application/json","x-version":"v2.6.11"},"referrer": "https://console.thethingsnetwork.org/applications/prova_gosdk/devices/arduinomega3_sf7",
-        "referrerPolicy": "strict-origin-when-cross-origin",
+        "credentials":"include","headers":{"accept":"application/json","accept-language":"it,de;q=0.9,en;q=0.8,sr;q=0.7","authorization":"Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1YmQ0MzZjNjc0MDMwMjAwNDg3MjM5OTUiLCJpc3MiOiJ0dG4tYWNjb3VudC12MiIsImlhdCI6MTU1MTk5MDA1OCwidHlwZSI6InVzZXIiLCJjbGllbnQiOiJ0dG4tY29uc29sZSIsInNjb3BlIjpbImFwcHMiLCJnYXRld2F5cyIsInByb2ZpbGUiLCJjbGllbnRzIl0sImludGVyY2hhbmdlYWJsZSI6dHJ1ZSwidXNlcm5hbWUiOiJpbGVjaXBpIiwiZW1haWwiOiJpbGUuY2VwaWxvdkB1emguY2giLCJjcmVhdGVkIjoiMjAxOC0xMC0yN1QwOTo1ODozMC4yNDZaIiwidmFsaWQiOnRydWUsIl9pZCI6IjViZDQzNmM2NzQwMzAyMDA0ODcyMzk5NSIsImV4cCI6MTU1MTk5MzcxOH0.LffPpkrxJdaeWhBWVFDdVzfR9606ZaBEg4vwbAOmAIhKG4tvTlZyy_pPyK0cYfhyrCe3gpnTEv3zN-3GuP3PhdtfjzT3WyUTUK0XJnh4naRqqZ5X-E7QhM8uEt89nSC2I8op-f_myPajB4pZ6NFqNiNK80ZOEYaWol58vm9YgyqqucmDzHH5wDL7skcTW15DfoNN_fBC2Mu6wWS3xMYIf8yGZ3LLOtxSFcvpw-lXcx5iAcXZioE6qqD7PeSxG7exwjQGUd0DoEljIphomZppsUwWDct5PMqplGiSSut-cgUZka5xHAOZbf_3OrmB6JiKjhaqSBJrq2DNhOmK0O7HppTFMMfKMxVs7E6TT0ASvSBeHHj0xic2JFNeVU_MA7olAox10_o2ESHr3IYGpqriQKol2d6a9CKyfWlq-_yxIlh8dn-wA1T2XZ7vbiF0quB6D16lgFd3Fde8vFukWKZ1mCeNpQUArVQLtB8iV_Ohe91LWZ5C3z3llhIJc7mm-_0mWk1AvGxeQ7byjmIzkstwRGUSvkZTRYAkZVd8XpNnA45tzFMy9wW1cKsPPv0VTTCZ93d1Ow3nLoesRH6SI2KEVQD6vlKdBAVnJI7VUajLUVFrPpC4kD23rV5iZfVSeGKXBkmlJtL-7LGHpg6jZCK9FMXddeYaO7gUsVY5nKG59Go","content-type":"application/json","x-version":"v2.6.11"},"referrer":"https://console.thethingsnetwork.org/applications/prova_gosdk/devices/thethingsuno_2","referrerPolicy": "strict-origin-when-cross-origin",
         "body": "{\"fport\":1,\"payload\":\"" + payload.toUpperCase() + "\"}",
         "method": "POST",
         "mode": "cors"
     });
 
 }
+
+
 
 

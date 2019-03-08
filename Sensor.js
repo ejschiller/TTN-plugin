@@ -39,12 +39,12 @@ class Sensor {
         this.logger.log(info,message);
     }
 
-    verifyData() {
+    async verifyData() {
         let isValid;
         if (!!this.data && !!this.signature && !!this.publicKey) {
             isValid = ed25519.Verify(this.data, this.signature, this.publicKey);
             if (isValid) {
-                bc.sendData(this);
+                await bc.sendData(this);
                 this.log('info', `${this.devId} signature is valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
 
             } else {
@@ -78,7 +78,7 @@ class Sensor {
     }
 
     set publicKey(value) {
-        this.resetParameters();
+        //this.resetParameters();
         this._publicKey = value;
     }
 

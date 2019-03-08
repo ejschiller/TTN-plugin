@@ -14,6 +14,7 @@ class Blockchain {
         this.getPrivKey = async () => {
             const data = await readFile(WALLET);
             return this.getPrivKeyFromFile(data)
+
         }
         this.txCnt = 0;
     }
@@ -32,11 +33,10 @@ class Blockchain {
             method: 'post',
             body: JSON.stringify(body),
             headers: {'Content-Type': 'application/json'},
+        }).then(()=>{
         })
+            .catch(() => { console.log('error ->',sensor.counter)})
         //.then(res => res.json())
-            .then(() => {
-
-            });
     }
 
     async isAccountCreated(sensor) {
