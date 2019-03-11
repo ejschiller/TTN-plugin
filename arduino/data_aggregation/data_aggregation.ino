@@ -10,6 +10,7 @@
 #include "MQ135.h"
 #include <Ed25519.h>
 #include <EEPROM.h>
+#include <SHA3.h>
  
 
 //STATES
@@ -25,7 +26,11 @@ const int SEND_SIGN_2 = 9;
 
 
 int STATE;
-
+//Wallet account
+uint8_t walletPubKey[32] = {103, 39, 245, 29, 180, 20, 70, 224, 64, 38, 31, 91, 8, 141, 50, 148, 74, 224, 178, 225, 169, 244, 123, 236, 151, 62, 207, 117, 150, 236, 214, 154};
+uint32_t txCnt = 0;
+uint64_t txFee = 1;
+byte Header = 0;
 
 //VARIABLES
 uint8_t privateKey[32];
@@ -129,6 +134,39 @@ void sendData(){
 }
 
 void signData(){
+    //Sign the whole wallet and data
+    byte byteTxCnt[] = {txCnt>>32, txCnt&0xFF};
+    byte byteTxFee[] = {txFee>>64, txFee&0xFF};
+    byte toSign[sizeof(walletPubKey)+sizeof(byteTxCnt)+sizeof(byteTxFee)+sizeof(Header)+sizeof(data)];
+
+    int start = 0;
+    for (int i = start; i < sizeof(walletPubKey); i++ ){
+      toSign[i] = walletPubKey[i];
+    }
+    
+    start = sizeof(walletPubKey);
+    for (int i = start; i < start + sizeof(byteTxCnt); i++ ){
+      toSign[i] = byteTxCnt[i-start];
+    }
+
+    start = start + sizeof(byteTxCnt);
+    for (int i = start; i < start + sizeof(byteTxFee); i++ ){
+      toSign[i] = byteTxFee[i-start];
+    }
+
+    start = start + sizeof(Header);
+    for (int i = start; i < start+sizeof(Header); i++ ){
+      toSign[i] = Header;
+    }
+
+    start = start + sizeof(data);
+    for (int i = start; i < start +sizeof(data); i++ ){
+      toSign[i] = data[i-start];
+    }
+
+    
+    
+    
     Ed25519::sign(signature, privateKey, publicKey, data, sizeof(data));
     STATE = SEND_SIGNATURE;
     os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);
