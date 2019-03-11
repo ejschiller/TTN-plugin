@@ -19,7 +19,7 @@ class Blockchain {
         this.txCnt = 0;
     }
 
-    sendData(sensor) {
+    sendData(sensor, toWallet) {
         console.log("SEND")
         const body = {
                 DevId: sensor.devId,
@@ -28,6 +28,8 @@ class Blockchain {
                 Signature: [...sensor.signature],
                 TxCnt: sensor.txCnt,
                 TxHash: [...sensor.txHash],
+                TxFee: sensor.txFee,
+                To: [...toWallet],
             }
         ;
         // console.log(body)

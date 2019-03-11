@@ -258,8 +258,8 @@ function DecoderCounter(bytes) {
 const pKTmp = new Buffer.from('2800D32430A9764BAB673107589FC7AE93C7DFA7C53FFFDAE0712A30FE880A28', 'HEX')
 const dataNodeTmp = new Buffer.from('00C300C1003D005A00E600CC004C007A00A700D1', 'HEX')
 
-const sTmp = new Buffer.from('6658B97D1401D9D1F03EA7C940B4262FFDE1740B46317D06322CF3A80A031004'+
-    '4D860A5103630981146BCB57725A39AFF02CFDB27F8EE9F64D917EDEE3F02D07', 'HEX')
+const sTmp = new Buffer.from('A80EF7F47308BE5906D1EB4C72909B514A5CDCE46BB4CD1DD0E7B2B4EF7EC224'+
+    'D8EAE7C79C003E5043CFC29AA50AEE75B383D3EE15EEEF5CBFD835982E6EA008', 'HEX')
 const senTmp = new Sensor('prova');
 let txCnt = 1234567;
 let txFee = 987654321;
@@ -274,21 +274,24 @@ async function testWallet(){
     const pubK = Buffer.from(bc.getPubKeyFromPrivKey(privK));
     const txCntB = Buffer.from(getInt32Bytes(txCnt));
     const txFeeB = Buffer.from(getInt64Bytes(txFee));
-    let toSign = Buffer.concat([pubK,txCntB, txFeeB])
+    let toSign = Buffer.concat([Buffer.from(sha.sha3_256(pubK),'HEX'),Buffer.from(sha.sha3_256(pKTmp),'HEX'),txCntB, txFeeB])
     let header = new Buffer.alloc(1);
     header.writeInt8(0,0);
     toSign = Buffer.concat([toSign, header,dataNodeTmp]);
     let hash = sha.sha3_256(toSign);
     hash = Buffer.from(hash,'HEX');
-    console.log(hash)
-    let valid = ed25519.Verify(hash, sTmp, pKTmp)
     console.log([...toSign])
+    let valid = ed25519.Verify(hash, sTmp, pKTmp)
+    console.log(valid)
     senTmp.publicKey = pKTmp;
     senTmp.data= dataNodeTmp;
-    senTmp.counter = txCnt;
+    senTmp.txCnt = txCnt;
     senTmp.txHash = hash;
-    senTmp.signature = sTmp
-    bc.sendData(senTmp)
+    senTmp.signature = sTmp;
+    senTmp.txFee = txFee;
+    //bc.createNewAccount(senTmp);
+    //bc.sendFunds(senTmp,12345);
+    bc.sendData(senTmp,pubK)
 }
 function getInt32Bytes( x ){
     var bytes = [];

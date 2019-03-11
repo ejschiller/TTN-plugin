@@ -148,15 +148,8 @@ void signData(){
     //Sign the whole wallet and data
     byte byteTxCnt[] = {(txCnt>>24)&0xFF,(txCnt>>16)&0xFF,(txCnt>>8)&0xFF,(txCnt)&0xFF};
     byte byteTxFee[] = {(txFee>>56)&0xFF,(txFee>>48)&0xFF,(txFee>>40)&0xFF,(txFee>>32)&0xFF,(txFee>>24)&0xFF,(txFee>>16)&0xFF,(txFee>>8)&0xFF,(txFee)&0xFF};
-     for (int i = 0; i < sizeof(byteTxCnt); i++ ){
-      Serial.print(byteTxCnt[i]);
-    }
-    Serial.println("");
-      for (int i = 0; i < sizeof(byteTxFee); i++ ){
-      Serial.print(byteTxFee[i]);
-    }
-    Serial.println("");
-    byte toSign[sizeof(walletPubKey)+sizeof(byteTxCnt)+sizeof(byteTxFee)+sizeof(Header)+sizeof(data)];
+    byte toSign[sizeof(walletPubKey)+sizeof(publicKey)+sizeof(byteTxCnt)+sizeof(byteTxFee)+sizeof(Header)+sizeof(data)];
+    
     Serial.print("Size of wallet");Serial.print(sizeof(walletPubKey));Serial.println("");
     Serial.print("byteTxCnt");Serial.print(sizeof(byteTxCnt));Serial.println("");
     Serial.print("byteTxFee");Serial.print(sizeof(byteTxFee));Serial.println("");
@@ -164,7 +157,7 @@ void signData(){
     Serial.print("toSign");Serial.print(sizeof(toSign));Serial.println("");
 
     sha->update(walletPubKey,sizeof(walletPubKey));
-     sha->finalize(hash,32);
+    sha->finalize(hash,32);
      
     
     int start = 0;
@@ -172,9 +165,19 @@ void signData(){
       toSign[i] = hash[i];
     }
     sha->reset();
-    
+
+    sha->update(publicKey,sizeof(publicKey));
+    sha->finalize(hash,32);
+     
     
     start = sizeof(hash);
+    for (int i = start; i < start + sizeof(hash); i++ ){
+      toSign[i] = hash[i-start];
+    }
+    sha->reset();
+    
+    
+    start = start + sizeof(hash);
     for (int i = start; i < start + sizeof(byteTxCnt); i++ ){
       toSign[i] = byteTxCnt[i-start];
     }

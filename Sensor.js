@@ -10,6 +10,7 @@ const TIME_MINED_BLOCK = 3*60*1000
 
 class Sensor {
 
+
     constructor(devId) {
         this._publicKey = null;
         this._signature = null;
@@ -20,6 +21,7 @@ class Sensor {
         this._txCnt = 0;
         this._walletCreated = false;
         this._txHash = null;
+        this._txFee = 1;
 
         this.logger = winston.createLogger({
             level: 'info',
@@ -137,6 +139,14 @@ class Sensor {
 
     set txHash(value) {
         this._txHash = value;
+    }
+
+    get txFee() {
+        return this._txFee;
+    }
+
+    set txFee(value) {
+        this._txFee = value;
     }
     async instantiateWallet(){
         if(!this.walletCreated){
