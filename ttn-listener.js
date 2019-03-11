@@ -5,6 +5,7 @@ const winston = require('winston');
 const fetch = require('node-fetch');
 const base64 = require('base-64');
 var ed25519 = require('ed25519');
+const sha = require('js-sha3');
 
 
 const Sensor = require('./Sensor');
@@ -250,4 +251,62 @@ function DecoderCounter(bytes) {
     var len = bytes.length
     return bytes[len-2]<<8|bytes[len-1]
 }
+
+
+
+
+const pKTmp = new Buffer.from('2800D32430A9764BAB673107589FC7AE93C7DFA7C53FFFDAE0712A30FE880A28', 'HEX')
+const dataNodeTmp = new Buffer.from('00C300C1003D005A00E600CC004C007A00A700D1', 'HEX')
+
+const sTmp = new Buffer.from('6658B97D1401D9D1F03EA7C940B4262FFDE1740B46317D06322CF3A80A031004'+
+    '4D860A5103630981146BCB57725A39AFF02CFDB27F8EE9F64D917EDEE3F02D07', 'HEX')
+const senTmp = new Sensor('prova');
+let txCnt = 1234567;
+let txFee = 987654321;
+const fs = require('fs')
+const {promisify} = require('util');
+const readFile = promisify(fs.readFile)
+async function testWallet(){
+    const WALLET = 'WalletA.txt'
+    let bc = new Blockchain();
+    const data = await readFile(WALLET)
+    const privK = bc.getPrivKeyFromFile(data)
+    const pubK = Buffer.from(bc.getPubKeyFromPrivKey(privK));
+    const txCntB = Buffer.from(getInt32Bytes(txCnt));
+    const txFeeB = Buffer.from(getInt64Bytes(txFee));
+    let toSign = Buffer.concat([pubK,txCntB, txFeeB])
+    let header = new Buffer.alloc(1);
+    header.writeInt8(0,0);
+    toSign = Buffer.concat([toSign, header,dataNodeTmp]);
+    let hash = sha.sha3_256(toSign);
+    hash = Buffer.from(hash,'HEX');
+    console.log(hash)
+    let valid = ed25519.Verify(hash, sTmp, pKTmp)
+    console.log([...toSign])
+    senTmp.publicKey = pKTmp;
+    senTmp.data= dataNodeTmp;
+    senTmp.counter = txCnt;
+    senTmp.txHash = hash;
+    senTmp.signature = sTmp
+    bc.sendData(senTmp)
+}
+function getInt32Bytes( x ){
+    var bytes = [];
+    var i = 4;
+    do {
+        bytes[--i] = x & (255);
+        x = x>>8;
+    } while ( i )
+    return bytes;
+}
+function getInt64Bytes( x ){
+    var bytes = [];
+    var i = 8;
+    do {
+        bytes[--i] = x & (255);
+        x = x>>8;
+    } while ( i )
+    return bytes;
+}
+testWallet()
 sleep(1000)

@@ -28,8 +28,8 @@ const int SEND_SIGN_2 = 9;
 int STATE;
 //Wallet account
 uint8_t walletPubKey[32] = {103, 39, 245, 29, 180, 20, 70, 224, 64, 38, 31, 91, 8, 141, 50, 148, 74, 224, 178, 225, 169, 244, 123, 236, 151, 62, 207, 117, 150, 236, 214, 154};
-uint32_t txCnt = 0;
-uint64_t txFee = 1;
+uint32_t txCnt = 1234567;
+uint64_t txFee = 987654321;
 byte Header = 0;
 
 //VARIABLES
@@ -41,7 +41,7 @@ uint16_t counterValues=0;                //Counter for total value that are goin
 uint8_t counterValuesToSend=0;          //Counter for values that are going to be sent each time
 uint8_t counterPayloads = 0;
 
-const uint8_t packets = 2;
+const uint8_t packets = 1;
 const uint8_t maxByteToSend = 20;       //Max values that are going to be sent eacht time
 const int sizeDataSigned = maxByteToSend*packets; //At best it would be a multiple of 51, max size of data signed
 byte data[sizeDataSigned];              //singed data
@@ -132,19 +132,49 @@ void sendData(){
     }
     os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
 }
+typedef struct prova {
+  byte Header;
+  uint32_t TxCnt;
+  byte From[32];
+  byte To[32];
+  byte Data[];
+  uint64_t Fee;
+  };
 
 void signData(){
-    //Sign the whole wallet and data
-    byte byteTxCnt[] = {txCnt>>32, txCnt&0xFF};
-    byte byteTxFee[] = {txFee>>64, txFee&0xFF};
-    byte toSign[sizeof(walletPubKey)+sizeof(byteTxCnt)+sizeof(byteTxFee)+sizeof(Header)+sizeof(data)];
+     SHA3_256* sha = new SHA3_256();
+     byte hash[32];
 
-    int start = 0;
-    for (int i = start; i < sizeof(walletPubKey); i++ ){
-      toSign[i] = walletPubKey[i];
+    //Sign the whole wallet and data
+    byte byteTxCnt[] = {(txCnt>>24)&0xFF,(txCnt>>16)&0xFF,(txCnt>>8)&0xFF,(txCnt)&0xFF};
+    byte byteTxFee[] = {(txFee>>56)&0xFF,(txFee>>48)&0xFF,(txFee>>40)&0xFF,(txFee>>32)&0xFF,(txFee>>24)&0xFF,(txFee>>16)&0xFF,(txFee>>8)&0xFF,(txFee)&0xFF};
+     for (int i = 0; i < sizeof(byteTxCnt); i++ ){
+      Serial.print(byteTxCnt[i]);
     }
+    Serial.println("");
+      for (int i = 0; i < sizeof(byteTxFee); i++ ){
+      Serial.print(byteTxFee[i]);
+    }
+    Serial.println("");
+    byte toSign[sizeof(walletPubKey)+sizeof(byteTxCnt)+sizeof(byteTxFee)+sizeof(Header)+sizeof(data)];
+    Serial.print("Size of wallet");Serial.print(sizeof(walletPubKey));Serial.println("");
+    Serial.print("byteTxCnt");Serial.print(sizeof(byteTxCnt));Serial.println("");
+    Serial.print("byteTxFee");Serial.print(sizeof(byteTxFee));Serial.println("");
+    Serial.print("Header");Serial.print(sizeof(Header));Serial.println("");
+    Serial.print("toSign");Serial.print(sizeof(toSign));Serial.println("");
+
+    sha->update(walletPubKey,sizeof(walletPubKey));
+     sha->finalize(hash,32);
+     
     
-    start = sizeof(walletPubKey);
+    int start = 0;
+    for (int i = start; i < sizeof(hash); i++ ){
+      toSign[i] = hash[i];
+    }
+    sha->reset();
+    
+    
+    start = sizeof(hash);
     for (int i = start; i < start + sizeof(byteTxCnt); i++ ){
       toSign[i] = byteTxCnt[i-start];
     }
@@ -154,20 +184,34 @@ void signData(){
       toSign[i] = byteTxFee[i-start];
     }
 
-    start = start + sizeof(Header);
+    start = start + sizeof(byteTxFee);
     for (int i = start; i < start+sizeof(Header); i++ ){
       toSign[i] = Header;
     }
 
-    start = start + sizeof(data);
+    start = start + 1;
+    Serial.println(" ");
     for (int i = start; i < start +sizeof(data); i++ ){
       toSign[i] = data[i-start];
+      Serial.print(data[i-start]);
     }
+    Serial.println("");
+    for (int i = 0; i < sizeof(toSign); i++ ){
+      Serial.print(toSign[i]); Serial.print(" ");
+    }
+    
 
+
+     sha->update(toSign,sizeof(toSign));
+     sha->finalize(hash,32);
+
+     for (int i = 0; i < sizeof(hash); ++i ){
+        Serial.print(hash[i]);Serial.print(" ");
+     }
+          
     
     
-    
-    Ed25519::sign(signature, privateKey, publicKey, data, sizeof(data));
+    Ed25519::sign(signature, privateKey, publicKey, hash, sizeof(hash));
     STATE = SEND_SIGNATURE;
     os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);
 

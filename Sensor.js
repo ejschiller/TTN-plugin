@@ -19,6 +19,7 @@ class Sensor {
         this._devId = devId;
         this._txCnt = 0;
         this._walletCreated = false;
+        this._txHash = null;
 
         this.logger = winston.createLogger({
             level: 'info',
@@ -130,6 +131,13 @@ class Sensor {
         this._walletCreated = value;
     }
 
+    get txHash() {
+        return this._txHash;
+    }
+
+    set txHash(value) {
+        this._txHash = value;
+    }
     async instantiateWallet(){
         if(!this.walletCreated){
             //Check if account is present in the blockchain

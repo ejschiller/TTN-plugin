@@ -10,7 +10,7 @@ const _ = require('lodash');
 
 
 
-const seeds = new Array(10000).fill(undefined).map(() => randomValueHex(64));
+const seeds = new Array(10).fill(undefined).map(() => randomValueHex(64));
 
 function generateSeeds() {
 
@@ -55,7 +55,7 @@ async function main() {
 
     //Generate seeds from the file
     //const seedsTmp = _.shuffle(seeds);
-    seeds.slice(0,1600).forEach((seed) => {
+    seeds.slice(0,10).forEach((seed) => {
         // fs.appendFileSync("tmpSeeds400-"+1+"k", seed + '\n', (err) => {
         //     if (err) {
         //         return console.log(err);
@@ -79,7 +79,7 @@ async function main() {
                     s.verifies = false;
                 }
             }
-            s['wait'] = getRandomArbitrary(1000,120*1000);
+            s['wait'] = getRandomArbitrary(0,1000);
             s['sendData'] = async ()=>{
                 bc.sendData(s);
             }
@@ -137,33 +137,36 @@ async function sendFundsToSensors(sensors){
 async function sendDataToBc(sensors, timeout, counter=0){
     //const startTime = new Date();
     for(let i=0;i<1;i++) {
-        for(let n=0;n<20;n++) {
-
-            generateDataAndSign(sensors)
-            sensors.forEach(async (sensor) => {
+        for(let n=0;n<1;n++) {
+            const sens =  generateDataAndSign(sensors);
+            sens.forEach(async (sensor) => {
                 //if(new Date() - startTime <10000){
-                //await sleep(sensor.wait);
-                sensor.counter = counter++;
-                sensor.sendData(sensor);
-                // if (counter % 20 == 0) {
-                //     console.log("sending with sleep-> ", sensor.wait)
-                // }
-                //}
+                let s = {...sensor};
+                await sleep(s.wait);
+                console.log(s.wait)
+                s.counter = counter++;
+                s.sendData(s);
+                if (counter % 100 == 0) {
+                    console.log("sending with sleep-> ", s.wait)
+                }
 
             })
-        }
-        console.log(counter)
+        //}
         //await sleep(120*1000);
+    }
     }
 }
 
 
 
 function generateDataAndSign(sensors){
-    sensors.forEach((s)=>{
-        s.generateData();
-        s.signData()
-    })
+    const asd = sensors
+    for(let i =0;i<sensors.length; i++){
+        asd[i].data = Buffer.from(randomValueHex(80*8),'HEX')
+        asd[i].signData();
+    }
+    return sensors
+
 }
 
 async function sleep(ms) {

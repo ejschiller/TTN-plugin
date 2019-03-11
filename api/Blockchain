@@ -20,12 +20,14 @@ class Blockchain {
     }
 
     sendData(sensor) {
+        console.log("SEND")
         const body = {
                 DevId: sensor.devId,
                 PublicKey: [...sensor.publicKey],
                 Data: [...sensor.data],
                 Signature: [...sensor.signature],
-                txCnt: sensor.txCnt,
+                TxCnt: sensor.txCnt,
+                TxHash: [...sensor.txHash],
             }
         ;
         // console.log(body)
