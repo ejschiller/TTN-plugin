@@ -83,7 +83,7 @@ ttn.data(appID, accessKey)
             if (payloadTmp.length === 32) {
                 if (counter === PUBLICKEY) {
                     savePublicKey(sensor, sensorTmp);
-                    if(!sensor.walletCreated){
+                    if (!sensor.walletCreated) {
                         //bc.createNewAccount(sensor);
                     }
                 }
@@ -110,7 +110,7 @@ ttn.data(appID, accessKey)
                     sensor.log('info', `[${time}] ${devID} received existing data #${counter.toString()}, datarate: ${data_rate}, airtime: ${airtime}, gateways: ${numberGateways}`)
                 } else {
                     sensor.packetReceived[counter] = true;
-                    sensor.counter = counter +1;
+                    sensor.counter = counter + 1;
                     saveData(sensor, sensorTmp)
                 }
             }
@@ -142,10 +142,11 @@ function sendAck(client, devID, message) {
 function savePublicKey(sensor, sensorTmp) {
     let isPubKey = sensor.publicKey === null;
     sensor.publicKey = tou8(sensorTmp.payloadTmp);
-    if(!isPubKey){
+    if (!isPubKey) {
         //sensor.instantiateWallet()
     }
-    sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received publicKey [${sensor.publicKey.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
+    sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received publicKey [${sensor.publicKey.slice(0, 5).toString('hex')}],
+     datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
 }
 
 function saveSignature(sensor, sensorTmp, counter) {
@@ -207,14 +208,14 @@ const s = new Buffer.from('6CDB7CF0C9784E02709C7EA92137F8E32C87E8FF820DC9637EDBD
 const sen = new Sensor('prova');
 
 //TEST
-let number = Buffer.from([Math.random()*10000,Math.random()*10000]);
+let number = Buffer.from([Math.random() * 10000, Math.random() * 10000]);
 let keypair = ed25519.MakeKeypair(pK)
 let signature = ed25519.Sign(number, keypair)
 console.log(ed25519.Verify(number, signature, keypair.publicKey))
 sen.publicKey = keypair.publicKey;
 sen.data = number
 sen.signature = signature;
-sen.txCnt=2
+sen.txCnt = 2
 
 //bc.createNewAccount(sen)
 //bc.sendFunds(sen,500)
@@ -222,13 +223,13 @@ sen.txCnt=2
 
 //10 packets of 40 each
 //160 seconds delay between packets
-async function test(){
+async function test() {
     for (let i = 1; i < 10; i++) {
 
-        console.log("send data to BC "+sen.txCnt)
+        console.log("send data to BC " + sen.txCnt)
         bc.sendData(sen)
         sen.txCnt = sen.txCnt + 1;
-        number = Buffer.from([Math.random()*10000,Math.random()*10000,Math.random()*10000,Math.random()*10000,Math.random()*10000]);
+        number = Buffer.from([Math.random() * 10000, Math.random() * 10000, Math.random() * 10000, Math.random() * 10000, Math.random() * 10000]);
         keypair = ed25519.MakeKeypair(pK)
         signature = ed25519.Sign(number, keypair)
 
@@ -238,16 +239,17 @@ async function test(){
         await sleep(10000)
 
 
-
     }
 }
+
 //test();
-async function sleep(ms){
+async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function DecoderCounter(bytes) {
     var len = bytes.length
-    return bytes[len-2]<<8|bytes[len-1]
+    return bytes[len - 2] << 8 | bytes[len - 1]
 }
+
 sleep(1000)

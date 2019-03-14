@@ -55,7 +55,7 @@ async function main() {
 
     //Generate seeds from the file
     //const seedsTmp = _.shuffle(seeds);
-    seeds.slice(0,1600).forEach((seed) => {
+    seeds.slice(0,1000).forEach((seed) => {
         // fs.appendFileSync("tmpSeeds400-"+1+"k", seed + '\n', (err) => {
         //     if (err) {
         //         return console.log(err);
@@ -110,12 +110,12 @@ async function createNewAccount(sensors){
     for(let i=0;i< sensors.length;i++){
         if(i%100==0){
             console.log("create account ->",i)
-            if(i%600==0) {
-                await sleep(2000);
+            if(i%500==0) {
+                await sleep(5000);
             }
         }
         sensors[i].createAccount(sensors[i]);
-        await sleep(30);
+        await sleep(10);
     }
 }
 async function sendFundsToSensors(sensors){
@@ -123,37 +123,34 @@ async function sendFundsToSensors(sensors){
         if(i%100==0){
             console.log("Send funds ->",i)
             if(i%600==0) {
-                await sleep(2000);
+                await sleep(1000);
             }
         }
-        if(sensors[i].verifies) {
+        //if(sensors[i].verifies) {
             sensors[i].sendFunds(sensors[i], 1000);
-            await sleep(12);
-        }
+            //await sleep(5);
+        //}
     }
 }
 
 
 async function sendDataToBc(sensors, timeout, counter=0){
     //const startTime = new Date();
-    for(let i=0;i<1;i++) {
-        for(let n=0;n<20;n++) {
+    for(let i=0;i<4;i++) {
 
             generateDataAndSign(sensors)
             sensors.forEach(async (sensor) => {
                 //if(new Date() - startTime <10000){
-                //await sleep(sensor.wait);
+                await sleep(sensor.wait);
                 sensor.counter = counter++;
                 sensor.sendData(sensor);
-                // if (counter % 20 == 0) {
-                //     console.log("sending with sleep-> ", sensor.wait)
-                // }
-                //}
+                if (counter % 20 == 0) {
+                    console.log("sending with sleep-> ", sensor.wait)
+                }
 
             })
-        }
         console.log(counter)
-        //await sleep(120*1000);
+        await sleep(120*1000);
     }
 }
 
