@@ -7,6 +7,8 @@ const base64 = require('base-64');
 var ed25519 = require('ed25519');
 const sha = require('js-sha3');
 
+//Root wallet NEEDED!
+const WALLET = 'WalletA.txt'
 
 const Sensor = require('./Sensor');
 const Blockchain = require('./api/Blockchain');
@@ -21,6 +23,8 @@ const SIGNATURE_1 = 81;     //Signature[0:32]
 const SIGNATURE_2 = 82;     //Signature[32:64]
 
 const bc = new Blockchain();
+bc.rootWallet = bc.getPrivKey();
+
 //Initialize the logger
 let logger = winston.createLogger({
     level: 'info',
@@ -42,13 +46,17 @@ ttn.data(appID, accessKey)
 //Start listening for incoming packets
     .then(function (client) {
 
-        client.on("uplink", function (devID, payload) {
+        client.on("uplink", async function (devID, payload) {
 
             const {payload_raw} = payload;
             if (!payload_raw) {
                 return;
             }
-            logger.log('info', JSON.stringify(payload))
+            //Extract the counter or the flag to recognize what kind of data is received
+            //const {payload_fields: {counter}} = payload;
+            const counter = DecoderCounter(payload_raw)
+            sendAck(client, devID, counter);
+
             let sensor = sensors.get(devID);
 
             //sensor does not exist yet
@@ -56,11 +64,6 @@ ttn.data(appID, accessKey)
                 sensor = new Sensor(devID);
                 sensors.set(devID, sensor);
             }
-            //Extract the counter or the flag to recognize what kind of data is received
-            //const {payload_fields: {counter}} = payload;
-            const counter = DecoderCounter(payload_raw)
-
-            sendAck(client, devID, counter);
 
             const {metadata: {time, data_rate, airtime, gateways}} = payload;
             let numberGateways = 0;
@@ -82,18 +85,20 @@ ttn.data(appID, accessKey)
 
             //Possible Packets = PublicKey | Signature1 | Signature2
             if (payloadTmp.length === 32) {
-                if (counter === PUBLICKEY) {
+                if (counter === PUBLICKEY && sensor.publicKey === 0) {
                     savePublicKey(sensor, sensorTmp);
-                    if(!sensor.walletCreated){
-                        //bc.createNewAccount(sensor);
+                    if (!sensor.walletCreated) {
+                        console.log("NO account, creating one new...")
+                        bc.createNewAccount(sensor);
                     }
                 }
-                else if (counter === SIGNATURE_1) {
+                else if (counter === SIGNATURE_1 && sensor.signature.length === 0) {
                     saveSignature(sensor, sensorTmp, SIGNATURE_1);
                 }
-                else if (counter === SIGNATURE_2) {
+                else if (counter === SIGNATURE_2 && sensor.signature.length === 32) {
                     saveSignature(sensor, sensorTmp, SIGNATURE_2);
-                    if (sensor.verifyData()) {
+                    const rootPubKey = bc.getPubKeyFromPrivKey(bc.rootWallet);
+                    if (sensor.verifyData(rootPubKey, bc)) {
                         console.log("SENDING DATA TO BC")
                         bc.sendData(sensor);
                     }
@@ -111,7 +116,7 @@ ttn.data(appID, accessKey)
                     sensor.log('info', `[${time}] ${devID} received existing data #${counter.toString()}, datarate: ${data_rate}, airtime: ${airtime}, gateways: ${numberGateways}`)
                 } else {
                     sensor.packetReceived[counter] = true;
-                    sensor.counter = counter +1;
+                    sensor.counter = counter + 1;
                     saveData(sensor, sensorTmp)
                 }
             }
@@ -125,8 +130,7 @@ ttn.data(appID, accessKey)
 
     })
     .catch(function (error) {
-        console.error("Error", error)
-        process.exit(1)
+        console.error("Error", error);
     });
 
 function sendAck(client, devID, message) {
@@ -143,8 +147,8 @@ function sendAck(client, devID, message) {
 function savePublicKey(sensor, sensorTmp) {
     let isPubKey = sensor.publicKey === null;
     sensor.publicKey = tou8(sensorTmp.payloadTmp);
-    if(!isPubKey){
-        //sensor.instantiateWallet()
+    if (!isPubKey) {
+        sensor.instantiateWallet(bc)
     }
     sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received publicKey [${sensor.publicKey.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
 }
@@ -175,47 +179,8 @@ function saveData(sensor, sensorTmp) {
 
 console.log("Listening to LoRa nodes from TTN...")
 
-
-const pK = new Buffer.from('E309D2CC8073C26A3EF0B73F38B83A36762BE6E524E18388733B01702B4F60B6', 'HEX')
-const dataNode = new Buffer.from('0079007C007400DD0096003B008F00E500D100E8006C00C30038006F00420033000F00F4002F00D2' +
-    '005500BF0035003900FD00D900B800FD00CD009E001700FB00A4000C0077009E006800DB00AD00CC' +
-
-
-    '00EF001800590072003E0006004000310072009D0084009F00D3007B00A100BC00B4007A0031000B' +
-
-
-    '00AA0098003D00E20000008A00E700BB008100A4007800E4006B00D00019000400DA0087007F00E6' +
-
-
-    '00D0002400A100B7006A001500BE00F90016008000FB004F008A006C009C00DF0007006F006D0024' +
-
-
-    '00F1004200B9008B00670007002400C200840077003F00DF00A8006400D2007A00AA000A003500E9' +
-
-
-    '0043000700D70077003300E1006200DE000F003F0010009B0058001F0008002500BA004D003800F7' +
-
-
-    '0052004A00FF006100C600E20025002E00FC0055001100870032005C0004009C008700E60049002C' +
-
-
-    '001100D3001C002000BC00820020002700BB00860048007F000500E00086007900D200D500E9000A' +
-
-
-    '008B00F900CF00EB00A500DA009200C2006A007F00AA00A3009100A20020001300CA00CE00A300A8', 'HEX')
-
-const s = new Buffer.from('6CDB7CF0C9784E02709C7EA92137F8E32C87E8FF820DC9637EDBDB4435B55BF80618A6C6F4023497F17082B774710E3D1D3B6F0AB26458EAB61189A383BCBA06', 'HEX')
 const sen = new Sensor('prova');
 
-//TEST
-let number = Buffer.from([Math.random()*10000,Math.random()*10000]);
-let keypair = ed25519.MakeKeypair(pK)
-let signature = ed25519.Sign(number, keypair)
-console.log(ed25519.Verify(number, signature, keypair.publicKey))
-sen.publicKey = keypair.publicKey;
-sen.data = number
-sen.signature = signature;
-sen.txCnt=2
 
 //bc.createNewAccount(sen)
 //bc.sendFunds(sen,500)
@@ -223,13 +188,13 @@ sen.txCnt=2
 
 //10 packets of 40 each
 //160 seconds delay between packets
-async function test(){
+async function test() {
     for (let i = 1; i < 10; i++) {
 
-        console.log("send data to BC "+sen.txCnt)
+        console.log("send data to BC " + sen.txCnt)
         bc.sendData(sen)
         sen.txCnt = sen.txCnt + 1;
-        number = Buffer.from([Math.random()*10000,Math.random()*10000,Math.random()*10000,Math.random()*10000,Math.random()*10000]);
+        number = Buffer.from([Math.random() * 10000, Math.random() * 10000, Math.random() * 10000, Math.random() * 10000, Math.random() * 10000]);
         keypair = ed25519.MakeKeypair(pK)
         signature = ed25519.Sign(number, keypair)
 
@@ -239,77 +204,68 @@ async function test(){
         await sleep(10000)
 
 
-
     }
 }
+
 //test();
-async function sleep(ms){
+async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+//Function to extract the current counter from the payload
 function DecoderCounter(bytes) {
     var len = bytes.length
-    return bytes[len-2]<<8|bytes[len-1]
+    return bytes[len - 2] << 8 | bytes[len - 1]
 }
 
-
-
-
-const pKTmp = new Buffer.from('2800D32430A9764BAB673107589FC7AE93C7DFA7C53FFFDAE0712A30FE880A28', 'HEX')
-const dataNodeTmp = new Buffer.from('00C300C1003D005A00E600CC004C007A00A700D1', 'HEX')
-
-const sTmp = new Buffer.from('A80EF7F47308BE5906D1EB4C72909B514A5CDCE46BB4CD1DD0E7B2B4EF7EC224'+
-    'D8EAE7C79C003E5043CFC29AA50AEE75B383D3EE15EEEF5CBFD835982E6EA008', 'HEX')
-const senTmp = new Sensor('prova');
-let txCnt = 1234567;
-let txFee = 987654321;
-const fs = require('fs')
-const {promisify} = require('util');
-const readFile = promisify(fs.readFile)
-async function testWallet(){
-    const WALLET = 'WalletA.txt'
+async function testWallet() {
+    keypair = ed25519.MakeKeypair(pKTmp);
     let bc = new Blockchain();
     const data = await readFile(WALLET)
     const privK = bc.getPrivKeyFromFile(data)
     const pubK = Buffer.from(bc.getPubKeyFromPrivKey(privK));
     const txCntB = Buffer.from(getInt32Bytes(txCnt));
     const txFeeB = Buffer.from(getInt64Bytes(txFee));
-    let toSign = Buffer.concat([Buffer.from(sha.sha3_256(pubK),'HEX'),Buffer.from(sha.sha3_256(pKTmp),'HEX'),txCntB, txFeeB])
+    let toSign = Buffer.concat([Buffer.from(sha.sha3_256(pubK), 'HEX'), Buffer.from(sha.sha3_256(keypair.publicKey), 'HEX'), txCntB, txFeeB])
     let header = new Buffer.alloc(1);
-    header.writeInt8(0,0);
-    toSign = Buffer.concat([toSign, header,dataNodeTmp]);
+    header.writeInt8(0, 0);
+    toSign = Buffer.concat([toSign, header, dataNodeTmp]);
     let hash = sha.sha3_256(toSign);
-    hash = Buffer.from(hash,'HEX');
-    console.log([...toSign])
-    let valid = ed25519.Verify(hash, sTmp, pKTmp)
+    hash = Buffer.from(hash, 'HEX');
+    //console.log([...toSign])
+    sTmp = ed25519.Sign(hash, keypair)
+    let valid = ed25519.Verify(hash, sTmp, keypair.publicKey)
     console.log(valid)
-    senTmp.publicKey = pKTmp;
-    senTmp.data= dataNodeTmp;
+    senTmp.publicKey = keypair.publicKey;
+    senTmp.data = dataNodeTmp;
     senTmp.txCnt = txCnt;
     senTmp.txHash = hash;
     senTmp.signature = sTmp;
     senTmp.txFee = txFee;
     //bc.createNewAccount(senTmp);
-    //bc.sendFunds(senTmp,12345);
-    bc.sendData(senTmp,pubK)
+    //bc.sendFunds(senTmp,987654321);
+    bc.sendData(senTmp, pubK)
 }
-function getInt32Bytes( x ){
+
+function getInt32Bytes(x) {
     var bytes = [];
     var i = 4;
     do {
         bytes[--i] = x & (255);
-        x = x>>8;
-    } while ( i )
+        x = x >> 8;
+    } while (i)
     return bytes;
 }
-function getInt64Bytes( x ){
+
+function getInt64Bytes(x) {
     var bytes = [];
     var i = 8;
     do {
         bytes[--i] = x & (255);
-        x = x>>8;
-    } while ( i )
+        x = x >> 8;
+    } while (i)
     return bytes;
 }
-testWallet()
+
+//testWallet()
 sleep(1000)

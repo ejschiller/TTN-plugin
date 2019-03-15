@@ -10,7 +10,9 @@ const tou8 = require('buffer-to-uint8array');
 
 
 class Blockchain {
+
     constructor() {
+        this._rootWallet = null;
         this.getPrivKey = async () => {
             const data = await readFile(WALLET);
             return this.getPrivKeyFromFile(data)
@@ -102,7 +104,7 @@ class Blockchain {
         }).then((resp) => resp.json())
             .then((data) => {
                 txHash = Buffer.from(data.content[0].detail.toString(), 'HEX');
-            })
+            }).catch((err)=>{console.log("ERR", err)})
         let sign;
         if (!txHash) {
             return
@@ -119,6 +121,14 @@ class Blockchain {
             body: '',
             headers: {'Content-Type': 'application/json'},
         })
+    }
+
+    get rootWallet() {
+        return this._rootWallet;
+    }
+
+    set rootWallet(value) {
+        this._rootWallet = value;
     }
 
     async sendFunds(sensor, amount) {

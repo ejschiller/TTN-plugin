@@ -1,15 +1,14 @@
 var ed25519 = require('ed25519');
 let winston = require('winston');
-const Blockchain = require('./api/Blockchain');
+const Buffer = require('buffer').Buffer;
+const sha = require('js-sha3');
 
-const bc = new Blockchain();
+
 const MIN_AMOUNT = 1000;
-const TIME_MINED_BLOCK = 3*60*1000
-
+const TIME_MINED_BLOCK = 3 * 60 * 1000
 
 
 class Sensor {
-
 
     constructor(devId) {
         this._publicKey = null;
@@ -22,6 +21,7 @@ class Sensor {
         this._walletCreated = false;
         this._txHash = null;
         this._txFee = 1;
+        this._rootWallet = null;
 
         this.logger = winston.createLogger({
             level: 'info',
@@ -35,37 +35,6 @@ class Sensor {
                 new winston.transports.File({filename: `log/${devId}.log`})]
         });
 
-    }
-
-
-    log(info, message){
-        this.logger.log(info,message);
-    }
-
-    async verifyData() {
-        let isValid;
-        if (!!this.data && !!this.signature && !!this.publicKey) {
-            isValid = ed25519.Verify(this.data, this.signature, this.publicKey);
-            if (isValid) {
-                await bc.sendData(this);
-                this.log('info', `${this.devId} signature is valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
-
-            } else {
-                this.log('info', `${this.devId} signature is NOT valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
-
-            }
-        }
-        this.resetParameters();
-        return isValid;
-
-    }
-
-    resetParameters() {
-        console.log(`[${this.devId}] resetting parameters to default`);
-        this._signature = null;
-        this._counter = 0;
-        this._data = null;
-        this._packetReceived = [];
     }
 
     get devId() {
@@ -148,21 +117,74 @@ class Sensor {
     set txFee(value) {
         this._txFee = value;
     }
-    async instantiateWallet(){
-        if(!this.walletCreated){
-            //Check if account is present in the blockchain
-           let createdInBC = await bc.isAccountCreated(this);
 
-           //if not created, instantiate a new one
-           if(!createdInBC){
-               //await bc.createNewAccount(this);
-               //await sleep(TIME_MINED_BLOCK)
-               //await bc.sendFunds(this, MIN_AMOUNT)
-           }
-           else{
-               //await bc.sendFunds(this, MIN_AMOUNT)
-               this.walletCreated = true;
-           }
+    get rootWallet() {
+        return this._rootWallet;
+    }
+
+    set rootWallet(value) {
+        this._rootWallet = value;
+    }
+
+    log(info, message) {
+        this.logger.log(info, message);
+    }
+    //Verify the transaction to avoid overfloodin the network wit invalid transactions
+    async verifyData(rootPubKey, blockchain) {
+        let isValid = false;
+        if (!!this.data && !!this.signature && !!this.publicKey) {
+            let header = new Buffer.alloc(1);
+            header.writeInt8(0, 0);
+
+            //The order is very important, they have to be concatenated
+            //and thus signed in the same order as in the arduino and in the blockchain
+            let txToSign = Buffer.concat([
+                Buffer.from(sha.sha3_256(rootPubKey), 'HEX'),
+                Buffer.from(sha.sha3_256(this.publicKey), 'HEX'),
+                Buffer.from(getInt32Bytes(this.txCnt)),
+                Buffer.from(getInt64Bytes(this.txFee)),
+                header,
+                this.data]);
+            this.txHash = Buffer.from(sha.sha3_256(txToSign), 'HEX');
+
+            isValid = ed25519.Verify(this.txHash, this.signature, this.publicKey);
+            if (isValid) {
+                await blockchain.sendData(this);
+                this.log('info', `${this.devId} signature is valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
+
+            } else {
+                this.log('info', `${this.devId} signature is NOT valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
+
+            }
+        }
+        this.resetParameters();
+        return isValid;
+
+    }
+
+    resetParameters() {
+        console.log(`[${this.devId}] resetting parameters to default`);
+        this._signature = null;
+        this._counter = 0;
+        this._data = null;
+        this._packetReceived = [];
+    }
+
+    async instantiateWallet(blockchain) {
+        if (!this.walletCreated) {
+            //Check if account is present in the blockchain
+            let createdInBC = await blockchain.isAccountCreated(this);
+
+            //if not created, instantiate a new one
+            if (!createdInBC) {
+                await bc.createNewAccount(this);
+                await sleep(TIME_MINED_BLOCK)
+                await bc.sendFunds(this, MIN_AMOUNT)
+            }
+            else {
+                //await bc.sendFunds(this, MIN_AMOUNT)
+                this.walletCreated = true;
+            }
         }
     }
 }
@@ -170,4 +192,5 @@ class Sensor {
 async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
 module.exports = Sensor;
