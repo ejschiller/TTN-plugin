@@ -2,14 +2,8 @@ const ttn = require("ttn");
 const tou8 = require('buffer-to-uint8array');
 const Buffer = require('buffer').Buffer;
 const winston = require('winston');
-const fetch = require('node-fetch');
-const base64 = require('base-64');
-var ed25519 = require('ed25519');
-const sha = require('js-sha3');
 const HelperFunctions = require("./HelperFunctions");
 
-//Root wallet NEEDED!
-const WALLET = 'WalletA.txt'
 
 const Sensor = require('./Sensor');
 const Blockchain = require('./api/Blockchain');

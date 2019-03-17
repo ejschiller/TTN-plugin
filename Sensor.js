@@ -147,7 +147,8 @@ class Sensor {
                 header,
                 this.data]);
             this.txHash = Buffer.from(sha.sha3_256(txToSign), 'HEX');
-
+            //Increase the txCnt --> @TODO: find a better way
+            this.txCnt++;
             isValid = ed25519.Verify(this.txHash, this.signature, this.publicKey);
             if (isValid) {
                 await blockchain.sendData(this, rootPubKey);
