@@ -26,10 +26,11 @@ const int SEND_SIGN_2 = 9;
 
 
 int STATE;
+
 //Wallet account
 uint8_t walletPubKey[32] = {103, 39, 245, 29, 180, 20, 70, 224, 64, 38, 31, 91, 8, 141, 50, 148, 74, 224, 178, 225, 169, 244, 123, 236, 151, 62, 207, 117, 150, 236, 214, 154};
-uint32_t txCnt = 1234567;
-uint64_t txFee = 987654321;
+uint32_t txCnt = 0;
+uint64_t txFee = 1;
 byte Header = 0;
 
 //VARIABLES
@@ -37,7 +38,7 @@ uint8_t privateKey[32];
 uint8_t publicKey[32];
 uint8_t signature[64];
 
-uint16_t counterValues=0;                //Counter for total value that are goin to be signed
+uint16_t counterValues=0;                //Counter for total value that are going to be signed
 uint8_t counterValuesToSend=0;          //Counter for values that are going to be sent each time
 uint8_t counterPayloads = 0;
 
@@ -148,6 +149,7 @@ void signData(){
     //Sign the whole wallet and data
     byte byteTxCnt[] = {(txCnt>>24)&0xFF,(txCnt>>16)&0xFF,(txCnt>>8)&0xFF,(txCnt)&0xFF};
     byte byteTxFee[] = {(txFee>>56)&0xFF,(txFee>>48)&0xFF,(txFee>>40)&0xFF,(txFee>>32)&0xFF,(txFee>>24)&0xFF,(txFee>>16)&0xFF,(txFee>>8)&0xFF,(txFee)&0xFF};
+
     byte toSign[sizeof(walletPubKey)+sizeof(publicKey)+sizeof(byteTxCnt)+sizeof(byteTxFee)+sizeof(Header)+sizeof(data)];
     
     Serial.print("Size of wallet");Serial.print(sizeof(walletPubKey));Serial.println("");
@@ -362,7 +364,7 @@ void onEvent (ev_t ev) {
             
             else if(STATE == SEND_SIGN_2 && expectedAck == SIGN_2){
                 Serial.println("Signature received, next state RESET_ALL_DATA");
-
+                txCnt = txCnt+1;
                 STATE = RESET_ALL_DATA;
             }
         }

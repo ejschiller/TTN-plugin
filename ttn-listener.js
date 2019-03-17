@@ -6,6 +6,7 @@ const fetch = require('node-fetch');
 const base64 = require('base-64');
 var ed25519 = require('ed25519');
 const sha = require('js-sha3');
+const HelperFunctions = require("./HelperFunctions");
 
 //Root wallet NEEDED!
 const WALLET = 'WalletA.txt'
@@ -54,7 +55,8 @@ ttn.data(appID, accessKey)
             }
             //Extract the counter or the flag to recognize what kind of data is received
             //const {payload_fields: {counter}} = payload;
-            const counter = DecoderCounter(payload_raw)
+            const counter = HelperFunctions.DecoderCounter(payload_raw)
+            //Send the ACK as soon as possible to increase the change to transfer it on time
             sendAck(client, devID, counter);
 
             let sensor = sensors.get(devID);
@@ -72,7 +74,7 @@ ttn.data(appID, accessKey)
             }
             //remove the counter from the buffer
             const len = payload_raw.length;
-            payloadTmp = payload_raw.slice(0, len - 2);
+            const payloadTmp = payload_raw.slice(0, len - 2);
             const sensorTmp = {
                 payloadTmp,
                 counter,
@@ -85,26 +87,19 @@ ttn.data(appID, accessKey)
 
             //Possible Packets = PublicKey | Signature1 | Signature2
             if (payloadTmp.length === 32) {
-                if (counter === PUBLICKEY && sensor.publicKey === 0) {
+                if (counter === PUBLICKEY && sensor.publicKey.length === 0) {
                     savePublicKey(sensor, sensorTmp);
-                    if (!sensor.walletCreated) {
-                        console.log("NO account, creating one new...")
-                        bc.createNewAccount(sensor);
-                    }
                 }
                 else if (counter === SIGNATURE_1 && sensor.signature.length === 0) {
                     saveSignature(sensor, sensorTmp, SIGNATURE_1);
                 }
                 else if (counter === SIGNATURE_2 && sensor.signature.length === 32) {
                     saveSignature(sensor, sensorTmp, SIGNATURE_2);
-                    const rootPubKey = bc.getPubKeyFromPrivKey(bc.rootWallet);
-                    if (sensor.verifyData(rootPubKey, bc)) {
-                        console.log("SENDING DATA TO BC")
-                        bc.sendData(sensor);
-                    }
-                }
-                else {
-                    console.log("PAYLOAD FORMAT UNKNOWN")
+                    bc.rootWallet.then((rootKey)=>{
+                        const rootPubKey = bc.getPubKeyFromPrivKey(rootKey);
+                        sensor.verifyDataAndSend(rootPubKey, bc)
+                    })
+
                 }
             }
             //Every other packet
@@ -121,13 +116,10 @@ ttn.data(appID, accessKey)
                 }
             }
         })
-
         // client.on("downlink", function (devID, payload) {
         //     console.log("Received downlnk from ", devID)
         //     console.log(payload)
         // })
-
-
     })
     .catch(function (error) {
         console.error("Error", error);
@@ -145,7 +137,7 @@ function sendAck(client, devID, message) {
 }
 
 function savePublicKey(sensor, sensorTmp) {
-    let isPubKey = sensor.publicKey === null;
+    let isPubKey = sensor.publicKey.length !== 0;
     sensor.publicKey = tou8(sensorTmp.payloadTmp);
     if (!isPubKey) {
         sensor.instantiateWallet(bc)
@@ -178,94 +170,3 @@ function saveData(sensor, sensorTmp) {
 
 
 console.log("Listening to LoRa nodes from TTN...")
-
-const sen = new Sensor('prova');
-
-
-//bc.createNewAccount(sen)
-//bc.sendFunds(sen,500)
-
-
-//10 packets of 40 each
-//160 seconds delay between packets
-async function test() {
-    for (let i = 1; i < 10; i++) {
-
-        console.log("send data to BC " + sen.txCnt)
-        bc.sendData(sen)
-        sen.txCnt = sen.txCnt + 1;
-        number = Buffer.from([Math.random() * 10000, Math.random() * 10000, Math.random() * 10000, Math.random() * 10000, Math.random() * 10000]);
-        keypair = ed25519.MakeKeypair(pK)
-        signature = ed25519.Sign(number, keypair)
-
-        sen.publicKey = keypair.publicKey;
-        sen.data = number
-        sen.signature = signature;
-        await sleep(10000)
-
-
-    }
-}
-
-//test();
-async function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-//Function to extract the current counter from the payload
-function DecoderCounter(bytes) {
-    var len = bytes.length
-    return bytes[len - 2] << 8 | bytes[len - 1]
-}
-
-async function testWallet() {
-    keypair = ed25519.MakeKeypair(pKTmp);
-    let bc = new Blockchain();
-    const data = await readFile(WALLET)
-    const privK = bc.getPrivKeyFromFile(data)
-    const pubK = Buffer.from(bc.getPubKeyFromPrivKey(privK));
-    const txCntB = Buffer.from(getInt32Bytes(txCnt));
-    const txFeeB = Buffer.from(getInt64Bytes(txFee));
-    let toSign = Buffer.concat([Buffer.from(sha.sha3_256(pubK), 'HEX'), Buffer.from(sha.sha3_256(keypair.publicKey), 'HEX'), txCntB, txFeeB])
-    let header = new Buffer.alloc(1);
-    header.writeInt8(0, 0);
-    toSign = Buffer.concat([toSign, header, dataNodeTmp]);
-    let hash = sha.sha3_256(toSign);
-    hash = Buffer.from(hash, 'HEX');
-    //console.log([...toSign])
-    sTmp = ed25519.Sign(hash, keypair)
-    let valid = ed25519.Verify(hash, sTmp, keypair.publicKey)
-    console.log(valid)
-    senTmp.publicKey = keypair.publicKey;
-    senTmp.data = dataNodeTmp;
-    senTmp.txCnt = txCnt;
-    senTmp.txHash = hash;
-    senTmp.signature = sTmp;
-    senTmp.txFee = txFee;
-    //bc.createNewAccount(senTmp);
-    //bc.sendFunds(senTmp,987654321);
-    bc.sendData(senTmp, pubK)
-}
-
-function getInt32Bytes(x) {
-    var bytes = [];
-    var i = 4;
-    do {
-        bytes[--i] = x & (255);
-        x = x >> 8;
-    } while (i)
-    return bytes;
-}
-
-function getInt64Bytes(x) {
-    var bytes = [];
-    var i = 8;
-    do {
-        bytes[--i] = x & (255);
-        x = x >> 8;
-    } while (i)
-    return bytes;
-}
-
-//testWallet()
-sleep(1000)

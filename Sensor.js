@@ -2,17 +2,19 @@ var ed25519 = require('ed25519');
 let winston = require('winston');
 const Buffer = require('buffer').Buffer;
 const sha = require('js-sha3');
+const HelperFunctions = require("./HelperFunctions");
+
 
 
 const MIN_AMOUNT = 1000;
-const TIME_MINED_BLOCK = 3 * 60 * 1000
+const TIME_MINED_BLOCK = 3 * 60 * 1000;
 
 
 class Sensor {
 
     constructor(devId) {
-        this._publicKey = null;
-        this._signature = null;
+        this._publicKey = [];
+        this._signature = [];
         this._counter = 0;
         this._data = null;
         this._packetReceived = [];
@@ -130,26 +132,25 @@ class Sensor {
         this.logger.log(info, message);
     }
     //Verify the transaction to avoid overfloodin the network wit invalid transactions
-    async verifyData(rootPubKey, blockchain) {
+    async verifyDataAndSend(rootPubKey, blockchain) {
         let isValid = false;
         if (!!this.data && !!this.signature && !!this.publicKey) {
             let header = new Buffer.alloc(1);
             header.writeInt8(0, 0);
-
             //The order is very important, they have to be concatenated
             //and thus signed in the same order as in the arduino and in the blockchain
             let txToSign = Buffer.concat([
-                Buffer.from(sha.sha3_256(rootPubKey), 'HEX'),
+                Buffer.from(sha.sha3_256(Buffer.from(rootPubKey)), 'HEX'),
                 Buffer.from(sha.sha3_256(this.publicKey), 'HEX'),
-                Buffer.from(getInt32Bytes(this.txCnt)),
-                Buffer.from(getInt64Bytes(this.txFee)),
+                Buffer.from(HelperFunctions.getInt32Bytes(this.txCnt)),
+                Buffer.from(HelperFunctions.getInt64Bytes(this.txFee)),
                 header,
                 this.data]);
             this.txHash = Buffer.from(sha.sha3_256(txToSign), 'HEX');
 
             isValid = ed25519.Verify(this.txHash, this.signature, this.publicKey);
             if (isValid) {
-                await blockchain.sendData(this);
+                await blockchain.sendData(this, rootPubKey);
                 this.log('info', `${this.devId} signature is valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
 
             } else {
@@ -164,7 +165,7 @@ class Sensor {
 
     resetParameters() {
         console.log(`[${this.devId}] resetting parameters to default`);
-        this._signature = null;
+        this._signature = [];
         this._counter = 0;
         this._data = null;
         this._packetReceived = [];
@@ -174,15 +175,15 @@ class Sensor {
         if (!this.walletCreated) {
             //Check if account is present in the blockchain
             let createdInBC = await blockchain.isAccountCreated(this);
-
+            console.log("IN BC", createdInBC)
             //if not created, instantiate a new one
             if (!createdInBC) {
-                await bc.createNewAccount(this);
+                await blockchain.createNewAccount(this);
                 await sleep(TIME_MINED_BLOCK)
-                await bc.sendFunds(this, MIN_AMOUNT)
+                await blockchain.sendFunds(this, MIN_AMOUNT)
             }
             else {
-                //await bc.sendFunds(this, MIN_AMOUNT)
+                await blockchain.sendFunds(this, MIN_AMOUNT)
                 this.walletCreated = true;
             }
         }
