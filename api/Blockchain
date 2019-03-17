@@ -38,7 +38,8 @@ class Blockchain {
             method: 'post',
             body: JSON.stringify(body),
             headers: {'Content-Type': 'application/json'},
-        }).then(()=>{
+        }).then(()=>{            sensor.txCnt++;
+
         })
             .catch(() => { })//console.log('error ->',sensor.counter)})
         //.then(res => res.json())
