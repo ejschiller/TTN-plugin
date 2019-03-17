@@ -42,8 +42,8 @@ uint16_t counterValues=0;                //Counter for total value that are goin
 uint8_t counterValuesToSend=0;          //Counter for values that are going to be sent each time
 uint8_t counterPayloads = 0;
 
-const uint8_t packets = 2;
-const uint8_t maxByteToSend = 40;       //Max values that are going to be sent eacht time
+const uint8_t packets = 1;
+const uint8_t maxByteToSend = 20;       //Max values that are going to be sent eacht time
 const int sizeDataSigned = maxByteToSend*packets; //At best it would be a multiple of 51, max size of data signed
 byte data[sizeDataSigned];              //singed data
 byte toSend[maxByteToSend+2];             //data sent each time
@@ -59,9 +59,9 @@ const uint8_t SIGN_2 = 82;
 
 
 //Configurations for TTN
-static const u1_t NWKSKEY[16] = { 0x93, 0x22, 0x65, 0xB5, 0xC0, 0xD8, 0xE6, 0x47, 0x31, 0x69, 0xAE, 0xC8, 0x79, 0x80, 0x60, 0xDF };
-static const u1_t APPSKEY[16] = { 0x03, 0xD9, 0x39, 0xB1, 0xFE, 0x24, 0xB0, 0x04, 0xE0, 0x06, 0x51, 0x4F, 0x09, 0x3B, 0xBF, 0x2D };
-static const u4_t DEVADDR = 0x2601174C;
+static const u1_t NWKSKEY[16] = { 0x6A, 0xE8, 0x0D, 0x06, 0x3A, 0x64, 0xD0, 0x8F, 0x9A, 0x9B, 0x55, 0x12, 0x0A, 0x1D, 0x14, 0xC0 };
+static const u1_t APPSKEY[16] = { 0x14, 0x59, 0x7C, 0x6B, 0x36, 0xBC, 0x99, 0x27, 0xA1, 0xAC, 0xF4, 0x32, 0x51, 0x52, 0xE3, 0xF7 };
+static const u4_t DEVADDR = 0x26011813;
 
 // These callbacks are only used in over-the-air activation, so they are
 // left empty here (we cannot leave them out completely unless
@@ -364,7 +364,7 @@ void onEvent (ev_t ev) {
             
             else if(STATE == SEND_SIGN_2 && expectedAck == SIGN_2){
                 Serial.println("Signature received, next state RESET_ALL_DATA");
-                txCnt = txCnt+1;
+                //txCnt = txCnt+1;
                 STATE = RESET_ALL_DATA;
             }
         }

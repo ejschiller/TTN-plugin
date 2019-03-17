@@ -151,6 +151,7 @@ class Sensor {
             isValid = ed25519.Verify(this.txHash, this.signature, this.publicKey);
             if (isValid) {
                 await blockchain.sendData(this, rootPubKey);
+                //this.txCnt++;
                 this.log('info', `${this.devId} signature is valid  publicKey: [${this.publicKey.toString('hex')}], signature: [${this.signature.toString('hex')}], data: ${this.data.toString('hex')}, size: ${this.data.length}`)
 
             } else {
@@ -179,10 +180,10 @@ class Sensor {
             if (!createdInBC) {
                 await blockchain.createNewAccount(this);
                 await sleep(TIME_MINED_BLOCK)
-                await blockchain.sendFunds(this, MIN_AMOUNT)
+                //await blockchain.sendFunds(this, MIN_AMOUNT)
             }
             else {
-                await blockchain.sendFunds(this, MIN_AMOUNT)
+                //await blockchain.sendFunds(this, MIN_AMOUNT)
                 this.walletCreated = true;
             }
         }
