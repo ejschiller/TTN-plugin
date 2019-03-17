@@ -175,7 +175,6 @@ class Sensor {
         if (!this.walletCreated) {
             //Check if account is present in the blockchain
             let createdInBC = await blockchain.isAccountCreated(this);
-            console.log("IN BC", createdInBC)
             //if not created, instantiate a new one
             if (!createdInBC) {
                 await blockchain.createNewAccount(this);
