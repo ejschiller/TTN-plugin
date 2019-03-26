@@ -142,80 +142,60 @@ typedef struct prova {
   uint64_t Fee;
   };
 
-void signData(){
-     SHA3_256* sha = new SHA3_256();
-     byte hash[32];
+void updateTxHash(byte *hash, int sizeOfHash, uint8_t *wallet, uint8_t *publicKey, byte *byteTxCnt, byte *byteTxFee, byte header, byte *data){
+      SHA3_256* sha = new SHA3_256();
+      int sizeTx = sizeof(walletPubKey)+sizeof(publicKey)+sizeof(byteTxCnt)+sizeof(byteTxFee)+sizeof(Header)+sizeof(data);
+      byte toSign[sizeTx];
 
-    //Sign the whole wallet and data
+      sha->update(walletPubKey,sizeof(walletPubKey));
+      sha->finalize(hash,sizeOfHash);
+
+      int start = 0;
+      for (int i = start; i < sizeof(sizeOfHash); i++ ){
+        toSign[i] = hash[i];
+      }
+      
+      sha->reset();
+      sha->update(publicKey,sizeof(publicKey));
+      sha->finalize(hash,sizeOfHash);
+           
+      start = sizeof(hash);
+      for (int i = start; i < start + sizeof(sizeOfHash); i++ ){
+        toSign[i] = hash[i-start];
+      }
+      
+      sha->reset();
+      
+      start = start + sizeof(sizeOfHash);
+      for (int i = start; i < start + sizeof(byteTxCnt); i++ ){
+        toSign[i] = byteTxCnt[i-start];
+      }
+  
+      start = start + sizeof(byteTxCnt);
+      for (int i = start; i < start + sizeof(byteTxFee); i++ ){
+        toSign[i] = byteTxFee[i-start];
+      }
+  
+      start = start + sizeof(byteTxFee);
+      for (int i = start; i < start+sizeof(Header); i++ ){
+        toSign[i] = Header;
+      }
+  
+      start = start + 1;
+      for (int i = start; i < start +sizeof(data); i++ ){
+        toSign[i] = data[i-start];
+      } 
+ 
+     sha->update(toSign,sizeof(toSign));
+     sha->finalize(hash,sizeOfHash);  
+  }
+  
+void signData(){
+    byte hash[32];
     byte byteTxCnt[] = {(txCnt>>24)&0xFF,(txCnt>>16)&0xFF,(txCnt>>8)&0xFF,(txCnt)&0xFF};
     byte byteTxFee[] = {(txFee>>56)&0xFF,(txFee>>48)&0xFF,(txFee>>40)&0xFF,(txFee>>32)&0xFF,(txFee>>24)&0xFF,(txFee>>16)&0xFF,(txFee>>8)&0xFF,(txFee)&0xFF};
-
-    byte toSign[sizeof(walletPubKey)+sizeof(publicKey)+sizeof(byteTxCnt)+sizeof(byteTxFee)+sizeof(Header)+sizeof(data)];
     
-    Serial.print("Size of wallet");Serial.print(sizeof(walletPubKey));Serial.println("");
-    Serial.print("byteTxCnt");Serial.print(sizeof(byteTxCnt));Serial.println("");
-    Serial.print("byteTxFee");Serial.print(sizeof(byteTxFee));Serial.println("");
-    Serial.print("Header");Serial.print(sizeof(Header));Serial.println("");
-    Serial.print("toSign");Serial.print(sizeof(toSign));Serial.println("");
-
-    sha->update(walletPubKey,sizeof(walletPubKey));
-    sha->finalize(hash,32);
-     
-    
-    int start = 0;
-    for (int i = start; i < sizeof(hash); i++ ){
-      toSign[i] = hash[i];
-    }
-    sha->reset();
-
-    sha->update(publicKey,sizeof(publicKey));
-    sha->finalize(hash,32);
-     
-    
-    start = sizeof(hash);
-    for (int i = start; i < start + sizeof(hash); i++ ){
-      toSign[i] = hash[i-start];
-    }
-    sha->reset();
-    
-    
-    start = start + sizeof(hash);
-    for (int i = start; i < start + sizeof(byteTxCnt); i++ ){
-      toSign[i] = byteTxCnt[i-start];
-    }
-
-    start = start + sizeof(byteTxCnt);
-    for (int i = start; i < start + sizeof(byteTxFee); i++ ){
-      toSign[i] = byteTxFee[i-start];
-    }
-
-    start = start + sizeof(byteTxFee);
-    for (int i = start; i < start+sizeof(Header); i++ ){
-      toSign[i] = Header;
-    }
-
-    start = start + 1;
-    Serial.println(" ");
-    for (int i = start; i < start +sizeof(data); i++ ){
-      toSign[i] = data[i-start];
-      Serial.print(data[i-start]);
-    }
-    Serial.println("");
-    for (int i = 0; i < sizeof(toSign); i++ ){
-      Serial.print(toSign[i]); Serial.print(" ");
-    }
-    
-
-
-     sha->update(toSign,sizeof(toSign));
-     sha->finalize(hash,32);
-
-     for (int i = 0; i < sizeof(hash); ++i ){
-        Serial.print(hash[i]);Serial.print(" ");
-     }
-          
-    
-    
+    updateTxHash(hash, sizeof(hash), walletPubKey, publicKey, byteTxCnt, byteTxFee, Header, data);
     Ed25519::sign(signature, privateKey, publicKey, hash, sizeof(hash));
     STATE = SEND_SIGNATURE;
     os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);
@@ -318,7 +298,7 @@ void onEvent (ev_t ev) {
         }
         if( ( LMIC.txrxFlags & ( TXRX_DNW1 | TXRX_DNW2 ) ) != 0 )
       {
-        Serial.println("Received something");
+        //Serial.println("Received something");
       }
         if (LMIC.dataLen) {
             Serial.print(F("Received "));

@@ -1,4 +1,4 @@
-const BLOCKCHAIN_CLIENT_IP = 'http://192.168.0.161:8010'
+const BLOCKCHAIN_CLIENT_IP = 'http://localhost:8010'
 const WALLET = 'WalletA.txt'
 const fs = require('fs')
 const Buffer = require('buffer').Buffer;
@@ -111,6 +111,11 @@ class Blockchain {
         }
         sign = ed25519.Sign(txHash, tou8(privKey));
 
+        this.sendAccTx(txHash,sign)
+    }
+
+    async sendAccTx(txHash, sign){
+
         const uri = `${BLOCKCHAIN_CLIENT_IP}/sendAccTx/${txHash.toString('hex')}/${sign.toString('hex')}`;
         //Then Send Acc Tx to the blockchain
         if (!sign) {
@@ -156,17 +161,20 @@ class Blockchain {
         let sign;
         if (!!txHash) {
             sign = ed25519.Sign(txHash, tou8(privKey));
-            const uri = `${BLOCKCHAIN_CLIENT_IP}/sendFundsTx/${txHash.toString('hex')}/${sign.toString('hex')}`;
+            this.sendFundsTx(txHash, sign);
+        }
+    }
 
-            //Then Send Funds Tx to the blockchain
-            if (!!sign) {
-                await fetch(uri, {
-                    method: 'post',
-                    body: '',
-                    headers: {'Content-Type': 'application/json'},
-                })
-                //this.txCnt++;
-            }
+    async sendFundsTx(txHash, sign){
+        const uri = `${BLOCKCHAIN_CLIENT_IP}/sendFundsTx/${txHash.toString('hex')}/${sign.toString('hex')}`;
+        //Then Send Funds Tx to the blockchain
+        if (!!sign) {
+            await fetch(uri, {
+                method: 'post',
+                body: '',
+                headers: {'Content-Type': 'application/json'},
+            })
+            //this.txCnt++;
         }
     }
 }

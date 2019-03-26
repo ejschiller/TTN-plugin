@@ -164,3 +164,9 @@ function saveData(sensor, sensorTmp) {
 
 
 console.log("Listening to LoRa nodes from TTN...")
+
+
+//let sensor = new Sensor();
+//sensor.publicKey = tou8(Buffer.from('d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a','hex'));
+//bc.createNewAccount(sensor);
+//bc.sendFunds(sensor,10000);
