@@ -59,9 +59,9 @@ const uint8_t SIGN_2 = 82;
 
 
 //Configurations for TTN
-static const u1_t NWKSKEY[16] = { 0x6A, 0xE8, 0x0D, 0x06, 0x3A, 0x64, 0xD0, 0x8F, 0x9A, 0x9B, 0x55, 0x12, 0x0A, 0x1D, 0x14, 0xC0 };
-static const u1_t APPSKEY[16] = { 0x14, 0x59, 0x7C, 0x6B, 0x36, 0xBC, 0x99, 0x27, 0xA1, 0xAC, 0xF4, 0x32, 0x51, 0x52, 0xE3, 0xF7 };
-static const u4_t DEVADDR = 0x26011813;
+static const u1_t NWKSKEY[16] = { 0xB2, 0x7C, 0xD4, 0x1E, 0xE9, 0x40, 0x90, 0x0D, 0xF2, 0xC4, 0xAF, 0x47, 0x8D, 0xAB, 0x70, 0x73 };
+static const u1_t APPSKEY[16] = { 0xC1, 0xEE, 0x14, 0x8C, 0xC8, 0x57, 0x17, 0xDF, 0xEA, 0xEC, 0x1F, 0xE9, 0xDA, 0x76, 0x5A, 0x1B };
+static const u4_t DEVADDR = 0x26011382;
 
 // These callbacks are only used in over-the-air activation, so they are
 // left empty here (we cannot leave them out completely unless
@@ -133,40 +133,36 @@ void sendData(){
     }
     os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
 }
-typedef struct prova {
-  byte Header;
-  uint32_t TxCnt;
-  byte From[32];
-  byte To[32];
-  byte Data[];
-  uint64_t Fee;
-  };
-
-void updateTxHash(byte *hash, int sizeOfHash, uint8_t *wallet, uint8_t *publicKey, byte *byteTxCnt, byte *byteTxFee, byte header, byte *data){
+  
+void signData(){
+      byte hash[32];
+      byte byteTxCnt[] = {(txCnt>>24)&0xFF,(txCnt>>16)&0xFF,(txCnt>>8)&0xFF,(txCnt)&0xFF};
+      byte byteTxFee[] = {(txFee>>56)&0xFF,(txFee>>48)&0xFF,(txFee>>40)&0xFF,(txFee>>32)&0xFF,(txFee>>24)&0xFF,(txFee>>16)&0xFF,(txFee>>8)&0xFF,(txFee)&0xFF};
+    
       SHA3_256* sha = new SHA3_256();
       int sizeTx = sizeof(walletPubKey)+sizeof(publicKey)+sizeof(byteTxCnt)+sizeof(byteTxFee)+sizeof(Header)+sizeof(data);
       byte toSign[sizeTx];
 
       sha->update(walletPubKey,sizeof(walletPubKey));
-      sha->finalize(hash,sizeOfHash);
+      sha->finalize(hash,sizeof(hash));
 
       int start = 0;
-      for (int i = start; i < sizeof(sizeOfHash); i++ ){
+      for (int i = start; i < sizeof(hash); i++ ){
         toSign[i] = hash[i];
       }
       
       sha->reset();
       sha->update(publicKey,sizeof(publicKey));
-      sha->finalize(hash,sizeOfHash);
+      sha->finalize(hash,sizeof(hash));
            
       start = sizeof(hash);
-      for (int i = start; i < start + sizeof(sizeOfHash); i++ ){
+      for (int i = start; i < start + sizeof(hash); i++ ){
         toSign[i] = hash[i-start];
       }
       
       sha->reset();
       
-      start = start + sizeof(sizeOfHash);
+      start = start + sizeof(hash);
       for (int i = start; i < start + sizeof(byteTxCnt); i++ ){
         toSign[i] = byteTxCnt[i-start];
       }
@@ -187,15 +183,11 @@ void updateTxHash(byte *hash, int sizeOfHash, uint8_t *wallet, uint8_t *publicKe
       } 
  
      sha->update(toSign,sizeof(toSign));
-     sha->finalize(hash,sizeOfHash);  
-  }
-  
-void signData(){
-    byte hash[32];
-    byte byteTxCnt[] = {(txCnt>>24)&0xFF,(txCnt>>16)&0xFF,(txCnt>>8)&0xFF,(txCnt)&0xFF};
-    byte byteTxFee[] = {(txFee>>56)&0xFF,(txFee>>48)&0xFF,(txFee>>40)&0xFF,(txFee>>32)&0xFF,(txFee>>24)&0xFF,(txFee>>16)&0xFF,(txFee>>8)&0xFF,(txFee)&0xFF};
+     sha->finalize(hash,sizeof(hash)); 
     
-    updateTxHash(hash, sizeof(hash), walletPubKey, publicKey, byteTxCnt, byteTxFee, Header, data);
+    
+    
+    
     Ed25519::sign(signature, privateKey, publicKey, hash, sizeof(hash));
     STATE = SEND_SIGNATURE;
     os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);

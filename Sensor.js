@@ -7,7 +7,7 @@ const HelperFunctions = require("./HelperFunctions");
 
 
 const MIN_AMOUNT = 1000;
-const TIME_MINED_BLOCK = 3 * 60 * 1000;
+const TIME_MINED_BLOCK = 60 * 1000;
 
 
 class Sensor {
