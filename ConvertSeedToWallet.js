@@ -10,7 +10,6 @@ var ed25519 = require('ed25519');
 
 async function main(){
     const seed = await readFile(SEED);
-    console.log(seed.length)
     const keyPair = ed25519.MakeKeypair(Buffer.from(seed.toString().substring(0, 64),'hex'));
     const pubKeyHex = keyPair.publicKey.toString('hex');
     const privKeyHex = keyPair.privateKey.toString('hex');
