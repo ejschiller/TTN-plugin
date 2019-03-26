@@ -37,10 +37,36 @@ let logger = winston.createLogger({
 const sensors = new Map();
 
 
+var data;
+
+var pubK = [];
+var sign = [];
+
+
+function verifyData(){
+    if (ed25519.Verify(data, new Uint8Array(sign), new Uint8Array(pubK))) {
+        console.log('Signature valid');
+    } else {
+        console.log('Signature NOT valid');
+    }
+}
+
+function resetParameter(){
+    sign = [];
+    counter = 0;
+    totalPacketToReceive = 0;
+    packetToReceive = 0;
+    packetReceived = [];
+}
+
+function sendAck(client, devID, message){
+    const buf = Buffer.alloc(2);
+    buf.writeUInt16BE(message, 0);
+    client.send(devID, buf, 1);
+}
 ttn.data(appID, accessKey)
 //Start listening for incoming packets
     .then(function (client) {
-
         client.on("uplink", async function (devID, payload) {
 
             const {payload_raw} = payload;
@@ -118,7 +144,6 @@ ttn.data(appID, accessKey)
     .catch(function (error) {
         console.error("Error", error);
     });
-
 function sendAck(client, devID, message) {
     try {
         const buf = Buffer.alloc(2);
