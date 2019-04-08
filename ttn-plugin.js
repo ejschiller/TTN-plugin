@@ -6,7 +6,7 @@ const HelperFunctions = require("./HelperFunctions");
 
 
 const Sensor = require('./Sensor');
-const Blockchain = require('./api/Blockchain');
+const Blockchain = require('./api/Blockchain.js');
 
 //TTN configuration
 const appID = process.env.appID ? process.env.appID : "prova_gosdk";
