@@ -107,7 +107,7 @@ ttn.data(appID, accessKey)
 
             //Possible Packets = PublicKey | Signature1 | Signature2
             if (payloadTmp.length === 32) {
-                if (counter === PUBLICKEY && sensor.publicKey.length === 0) {
+                if (counter === PUBLICKEY) {
                     savePublicKey(sensor, sensorTmp);
                 }
                 else if (counter === SIGNATURE_1 && sensor.signature.length === 0) {
@@ -158,10 +158,12 @@ function sendAck(client, devID, message) {
 function savePublicKey(sensor, sensorTmp) {
     let isPubKey = sensor.publicKey.length !== 0;
     sensor.publicKey = tou8(sensorTmp.payloadTmp);
-    if (!isPubKey) {
+    //if (!isPubKey) {
         sensor.instantiateWallet(bc)
-    }
-    sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received publicKey [${sensor.publicKey.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
+    //}
+	if(!isPubKey){
+    		sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received publicKey [${sensor.publicKey.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
+	}
 }
 
 function saveSignature(sensor, sensorTmp, counter) {

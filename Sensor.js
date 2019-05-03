@@ -7,7 +7,7 @@ const HelperFunctions = require("./HelperFunctions");
 
 
 const MIN_AMOUNT = 1000;
-const TIME_MINED_BLOCK = 40 * 1000;
+const TIME_MINED_BLOCK =  60*1000;
 
 
 class Sensor {
@@ -186,7 +186,9 @@ class Sensor {
                 //await blockchain.sendFunds(this, MIN_AMOUNT)
                 this.walletCreated = true;
             }
-        }
+        }else {
+		await blockchain.sendFunds(this, MIN_AMOUNT)
+	}
     }
 }
 

@@ -144,7 +144,7 @@ class Blockchain {
                 DevId: sensor.devId,
                 ToPubKey: [...sensor.publicKey],
                 FromPubKey: [...pubKey],
-                txCnt: this.txCnt,
+                txCnt: ++this.txCnt,
                 Fee: 200,
                 Amount: amount,
             }
