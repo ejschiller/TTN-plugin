@@ -178,9 +178,9 @@ class Sensor {
             let createdInBC = await blockchain.isAccountCreated(this);
             //if not created, instantiate a new one
             if (!createdInBC) {
-                await blockchain.createNewAccount(this);
-                await sleep(TIME_MINED_BLOCK);
-                await blockchain.sendFunds(this, MIN_AMOUNT)
+                //await blockchain.createNewAccount(this);
+                //await sleep(TIME_MINED_BLOCK);
+                //await blockchain.sendFunds(this, MIN_AMOUNT)
             }
             else {
                 //await blockchain.sendFunds(this, MIN_AMOUNT)

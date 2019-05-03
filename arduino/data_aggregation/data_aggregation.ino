@@ -42,8 +42,8 @@ uint16_t counterValues=0;                //Counter for total value that are goin
 uint8_t counterValuesToSend=0;          //Counter for values that are going to be sent each time
 uint8_t counterPayloads = 0;
 
-const uint8_t packets = 1;
-const uint8_t maxByteToSend = 20;       //Max values that are going to be sent eacht time
+const uint8_t packets = 10;
+const uint8_t maxByteToSend = 10;       //Max values that are going to be sent eacht time
 const int sizeDataSigned = maxByteToSend*packets; //At best it would be a multiple of 51, max size of data signed
 byte data[sizeDataSigned];              //singed data
 byte toSend[maxByteToSend+2];             //data sent each time
@@ -56,12 +56,13 @@ const uint8_t PUB_KEY = 80;
 const uint8_t SIGN_1 = 81;
 const uint8_t SIGN_2 = 82;
 
+int rnd = 0;
 
 
 //Configurations for TTN
-static const u1_t NWKSKEY[16] = { 0xB2, 0x7C, 0xD4, 0x1E, 0xE9, 0x40, 0x90, 0x0D, 0xF2, 0xC4, 0xAF, 0x47, 0x8D, 0xAB, 0x70, 0x73 };
-static const u1_t APPSKEY[16] = { 0xC1, 0xEE, 0x14, 0x8C, 0xC8, 0x57, 0x17, 0xDF, 0xEA, 0xEC, 0x1F, 0xE9, 0xDA, 0x76, 0x5A, 0x1B };
-static const u4_t DEVADDR = 0x26011382;
+static const u1_t NWKSKEY[16] = { 0x74, 0x60, 0xED, 0x9E, 0xF1, 0x94, 0x8C, 0xFB, 0x4D, 0xB4, 0x89, 0xF0, 0xF2, 0x90, 0x6C, 0x01 };
+static const u1_t APPSKEY[16] = { 0x5B, 0xB3, 0x2F, 0xD3, 0xA3, 0x6D, 0xA5, 0x54, 0x2A, 0x45, 0x32, 0x62, 0xA1, 0xC5, 0xED, 0x7F };
+static const u4_t DEVADDR = 0x26011F23;
 
 // These callbacks are only used in over-the-air activation, so they are
 // left empty here (we cannot leave them out completely unless
@@ -189,6 +190,8 @@ void signData(){
     
     
     Ed25519::sign(signature, privateKey, publicKey, hash, sizeof(hash));
+   
+
     STATE = SEND_SIGNATURE;
     os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(0), do_send);
 
@@ -349,7 +352,18 @@ void onEvent (ev_t ev) {
 void setup() {
     Serial.begin(115200);
     Serial.println(F("Starting..."));
+    rnd = EEPROM.read ( 40 );
+    EEPROM.write ( 40, rnd+1);
+            while(false){
+          unsigned long StartTime = millis();
+        Ed25519::generatePrivateKey(privateKey);
+              Ed25519::derivePublicKey(publicKey, privateKey);
 
+          unsigned long CurrentTime = millis();
+          unsigned long ElapsedTime = CurrentTime - StartTime;  
+          Serial.print("Elapsedtime ");Serial.println(ElapsedTime);
+      }
+    
     STATE = SEND_PUBKEY;
     //Check if private Key is already stored, if not generate one
     if(EEPROM.read ( 0 )==0 && EEPROM.read ( 1 ) == 0 ){
@@ -368,7 +382,6 @@ void setup() {
       //Derive the public key from the private key
       Ed25519::derivePublicKey(publicKey, privateKey);
 
-    
     // LMIC init
     os_init();
 
@@ -393,10 +406,9 @@ void setup() {
 }
 
 uint8_t getDataFromSensor(){
-    return random(100, 1000);
+    return random(100, 1000)+rnd;
 }
 
 void loop() {
-
     os_runloop_once();
 }

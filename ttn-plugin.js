@@ -159,7 +159,7 @@ function savePublicKey(sensor, sensorTmp) {
     let isPubKey = sensor.publicKey.length !== 0;
     sensor.publicKey = tou8(sensorTmp.payloadTmp);
     if (!isPubKey) {
-        sensor.instantiateWallet(bc)
+        //sensor.instantiateWallet(bc)
     }
     sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received publicKey [${sensor.publicKey.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
 }
