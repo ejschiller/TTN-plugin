@@ -17,8 +17,7 @@ const PUBLICKEY = 80;
 const SIGNATURE_1 = 81;     //Signature[0:32]
 const SIGNATURE_2 = 82;     //Signature[32:64]
 
-const bc = new Blockchain();
-bc.rootWallet = bc.getPrivKey();
+
 
 //Initialize the logger
 let logger = winston.createLogger({
@@ -41,6 +40,22 @@ var data;
 
 var pubK = [];
 var sign = [];
+
+
+
+let effTests = [];
+let efficiencyTest = {
+    publicKey: 0,
+    sign1: 0,
+    sign2: 0,
+    dataPackets: 0,
+    alreadyReceivedDataPackets: 0,
+    downLink: 0,
+};
+effTests.push(efficiencyTest)
+function getCurrentTestIndex(){
+    return effTests.length-1
+}
 
 
 function verifyData(){
@@ -78,7 +93,6 @@ ttn.data(appID, accessKey)
             const counter = HelperFunctions.DecoderCounter(payload_raw)
             //Send the ACK as soon as possible to increase the change to transfer it on time
             sendAck(client, devID, counter);
-
             let sensor = sensors.get(devID);
 
             //sensor does not exist yet
@@ -107,19 +121,32 @@ ttn.data(appID, accessKey)
 
             //Possible Packets = PublicKey | Signature1 | Signature2
             if (payloadTmp.length === 32) {
-                if (counter === PUBLICKEY && sensor.publicKey.length === 0) {
+                if (counter === PUBLICKEY) {
+                    if(effTests[getCurrentTestIndex()].sign2>0) {
+                        sensor.resetParameters()
+                        let efficiencyTest = {
+                            publicKey: 1,
+                            sign1: 0,
+                            sign2: 0,
+                            dataPackets: 0,
+                            alreadyReceivedDataPackets: 0,
+                            downLink: 0,
+                        };
+                        effTests.push(efficiencyTest)
+                    }else{
+                        effTests[getCurrentTestIndex()].publicKey++;
+                    }
+                    sensor.log('info', `LENGTH OF TESTS --> ${effTests.length}`)
+                    sensor.log('info', JSON.stringify(effTests))
                     savePublicKey(sensor, sensorTmp);
                 }
-                else if (counter === SIGNATURE_1 && sensor.signature.length === 0) {
+                else if (counter === SIGNATURE_1) {
+                    effTests[getCurrentTestIndex()].sign1++;
                     saveSignature(sensor, sensorTmp, SIGNATURE_1);
                 }
-                else if (counter === SIGNATURE_2 && sensor.signature.length === 32) {
+                else if (counter === SIGNATURE_2) {
+                    effTests[getCurrentTestIndex()].sign2++;
                     saveSignature(sensor, sensorTmp, SIGNATURE_2);
-                    bc.rootWallet.then((rootKey)=>{
-                        const rootPubKey = bc.getPubKeyFromPrivKey(rootKey);
-                        sensor.verifyDataAndSend(rootPubKey, bc)
-                    })
-
                 }
             }
             //Every other packet
@@ -128,13 +155,17 @@ ttn.data(appID, accessKey)
                 const {packetReceived} = sensor;
                 //packet already received, send only ACK
                 if (!!packetReceived[counter]) {
+                    effTests[getCurrentTestIndex()].alreadyReceivedDataPackets++;
                     sensor.log('info', `[${time}] ${devID} received existing data #${counter.toString()}, datarate: ${data_rate}, airtime: ${airtime}, gateways: ${numberGateways}`)
                 } else {
+                    effTests[getCurrentTestIndex()].dataPackets++;
                     sensor.packetReceived[counter] = true;
                     sensor.counter = counter + 1;
                     saveData(sensor, sensorTmp)
                 }
             }
+            effTests[getCurrentTestIndex()].downLink++;
+
         })
         // client.on("downlink", function (devID, payload) {
         //     console.log("Received downlnk from ", devID)
@@ -159,7 +190,7 @@ function savePublicKey(sensor, sensorTmp) {
     let isPubKey = sensor.publicKey.length !== 0;
     sensor.publicKey = tou8(sensorTmp.payloadTmp);
     if (!isPubKey) {
-        sensor.instantiateWallet(bc)
+        //sensor.instantiateWallet(bc)
     }
     sensor.log('info', `[${sensorTmp.time}] ${sensorTmp.devID} received publicKey [${sensor.publicKey.slice(0, 5).toString('hex')}], datarate: ${sensorTmp.data_rate}, airtime: ${sensorTmp.airtime}, gateways: ${sensorTmp.numberGateways}`);
 }
