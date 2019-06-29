@@ -11,6 +11,7 @@
   "dependencies": {
     "base-64": "^0.1.0",
     "buffer-to-uint8array": "^1.1.0",
+    "dgram": "^1.0.1",
     "ed25519": "0.0.4",
     "ed25519-supercop": "^1.2.0",
     "event-stream": "^4.0.1",
