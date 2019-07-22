@@ -1,6 +1,6 @@
 var ed25519 = require('ed25519');
-let winston = require('winston');
 const Buffer = require('buffer').Buffer;
+let winston = require('winston');
 const sha = require('js-sha3');
 const HelperFunctions = require("./HelperFunctions");
 
