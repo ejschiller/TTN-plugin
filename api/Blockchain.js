@@ -80,7 +80,7 @@ class Blockchain {
 
     getPubKeyFromPrivKey(privKey) {
         if (privKey.length == 64) {
-            return privKey.slice(32);
+            return privKey.slice(32)
         }
     }
 

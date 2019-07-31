@@ -1,12 +1,12 @@
 const PORT = 5000;
-const HOST = '192.168.2.213';
+const HOST = '192.168.0.223';
 const port = 5000;
 const host = '192.168.2.213';
 const tou8 = require('buffer-to-uint8array');
 var ed25519 = require('ed25519');
 const Buffer = require('buffer').Buffer;
 const sha = require('js-sha3');
-
+const bigInt = require("big-integer");
 
 const dgram = require('dgram');
 const server = dgram.createSocket('udp4');
@@ -84,46 +84,57 @@ let txFee = [];
 let txCnt = [];
 let header = [];
 let data = [];
-
+let counter =0
+function toByteArray(hexString) {
+    let result = []
+    while (hexString.length >= 2) {
+        result.push(parseInt(hexString.substring(0, 2), 16));
+        hexString = hexString.substr(2, hexString.length)
+    }
+    return result;
+}
 server.on('message', function(message, remote) {
-	console.log(remote.address + ':' + remote.port +' - ' + message2);
+	//console.log(remote.address + ':' + remote.port +' - ' + message2);
 	if(true){
 		try {
             IoTAddress = remote.address;
             IoTPort = remote.port;
             console.log(IoTAddress,':',IoTPort);
+            console.log(counter++,'--->',message.length)
+			let test = bigInt(message.toString('hex'),16).toArray(9);
+            console.log(message);
             //console.log(remote);
 			//console.log('MESSAGE HEX', message.length, message);
-			let msg = JSON.parse(message.toString())
-			console.log(message.length)
-			console.log(message.toString());
-			if(msg.hasOwnProperty('pK')){
-				console.log("PubKey received");
-				publicKey = tou8(msg.pK);
-			}else if(msg.hasOwnProperty('signature')){
-				signature = tou8(msg.signature);
-				walletPubKey = tou8(msg.walletPubKey);
-				txCnt = tou8(msg.txCnt);
-				txFee = tou8(msg.txFee);
-				header = tou8(msg.header);
-				data = tou8(msg.data)
-				console.log("to verify....")
-
-				let toVerify = Buffer.concat([
-					Buffer.from(walletPubKey),
-					Buffer.from(tou8(msg.publicKey)),
-					Buffer.from(txCnt),
-					Buffer.from(txFee),
-					Buffer.from(header),
-					Buffer.from(data)
-				]);
-				console.log("To verify", toVerify);
-				console.log("tx hash....")
-				let txHash = Buffer.from(sha.sha3_256(toVerify),'HEX');
-				console.log("hash:",txHash,"\nsignature:",Buffer.from(signature),"\npubKey",Buffer.from(publicKey) )
-				isValid = ed25519.Verify(txHash, Buffer.from(signature), Buffer.from(publicKey));
-				console.log("IS VALID", isValid)
-			}
+			// let msg = JSON.parse(message.toString())
+			// console.log(message.length)
+			// console.log(message.toString());
+			// if(msg.hasOwnProperty('pK')){
+			// 	console.log("PubKey received");
+			// 	publicKey = tou8(msg.pK);
+			// }else if(msg.hasOwnProperty('signature')){
+			// 	signature = tou8(msg.signature);
+			// 	walletPubKey = tou8(msg.walletPubKey);
+			// 	txCnt = tou8(msg.txCnt);
+			// 	txFee = tou8(msg.txFee);
+			// 	header = tou8(msg.header);
+			// 	data = tou8(msg.data)
+			// 	console.log("to verify....")
+			//
+			// 	let toVerify = Buffer.concat([
+			// 		Buffer.from(walletPubKey),
+			// 		Buffer.from(tou8(msg.publicKey)),
+			// 		Buffer.from(txCnt),
+			// 		Buffer.from(txFee),
+			// 		Buffer.from(header),
+			// 		Buffer.from(data)
+			// 	]);
+			// 	console.log("To verify", toVerify);
+			// 	console.log("tx hash....")
+			// 	let txHash = Buffer.from(sha.sha3_256(toVerify),'HEX');
+			// 	console.log("hash:",txHash,"\nsignature:",Buffer.from(signature),"\npubKey",Buffer.from(publicKey) )
+			// 	isValid = ed25519.Verify(txHash, Buffer.from(signature), Buffer.from(publicKey));
+			// 	console.log("IS VALID", isValid)
+			// }
 			// if(message.toString().includes('pK')){
 			// 	console.log("pK");
 			// 	console.log(JSON.parse(message).pK)
@@ -146,8 +157,8 @@ server.on('message', function(message, remote) {
             console.log('_____________________________________________________')
             //sendData();
 			// client.send(message2, 0, message2.length, remote.port, remote.address, function (err, bytes) {
-            //
-            //
+			// 	console.log("SEND BUFFER")
+			//
 			// });
 		}catch(e){
 			console.error('error', e)
@@ -159,6 +170,9 @@ async function sendData(){
 
 		for(let i=0;i<5;i++){
 				client.send("UZH", 0, "UZH".length, IoTPort, IoTAddress, function (err, bytes) {
+					console.log('UDP message sent ', i, "UZH", 0, "UZH".length, IoTPort, IoTAddress);
+				});
+				client.send(message2, 0, message2.length, '5000', IoTAddress, function (err, bytes) {
 					console.log('UDP message sent ', i, "UZH", 0, "UZH".length, IoTPort, IoTAddress);
 				});
 			await sleep(2000);

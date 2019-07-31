@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "base-64": "^0.1.0",
+    "big-integer": "^1.6.44",
     "buffer-to-uint8array": "^1.1.0",
     "dgram": "^1.0.1",
     "ed25519": "0.0.4",
