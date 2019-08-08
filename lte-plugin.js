@@ -1,6 +1,6 @@
-const PORT = 5000;
-const HOST = '192.168.0.223';
-const port = 5000;
+const PORT = 5001;
+const HOST = '192.168.0.241';
+const port = 5001;
 const host = '192.168.2.213';
 const tou8 = require('buffer-to-uint8array');
 var ed25519 = require('ed25519');
@@ -100,9 +100,59 @@ server.on('message', function(message, remote) {
             IoTAddress = remote.address;
             IoTPort = remote.port;
             console.log(IoTAddress,':',IoTPort);
-            console.log(counter++,'--->',message.length)
-			let test = bigInt(message.toString('hex'),16).toArray(9);
-            console.log(message);
+            console.log(counter++,'--->',message.length);
+
+            //const zeroPositions = message.splice(1,nrOfZeros);
+			let msg = toByteArray(message.toString('hex'));
+
+			const msgLength = msg.length
+			const nrOfZeros = (msg[0] - 1);
+			console.log("ZEROS -> ", nrOfZeros);
+			const zerosPosition = msg.slice(1, nrOfZeros + 1);
+            console.log("Zero length", zerosPosition.length, "---> Zero Positions ", zerosPosition);
+            const toSignAndSignature =  msg.slice(1+ nrOfZeros, msg.length-64);
+            console.log("toSignAndSignature len", toSignAndSignature.length);
+            const pubKey = msg.slice(msgLength -64-1,msgLength -32-1);
+            console.log("pubKey len", pubKey.length)
+            const walletPubKey = msg.slice(msgLength -32 -1,msgLength-1);
+            console.log("wallePubKey len", walletPubKey.length);
+			//let test = bigInt(message.toString('hex'),16).toArray(9);
+
+			let overflow = 0;
+			let tmpIndex = 0;
+			let previousByte = zerosPosition[0];
+			for(let i =0; i< zerosPosition.length;i++){
+				let tmpByte = zerosPosition[i];
+				if(previousByte>tmpByte){
+					overflow++;
+				}
+				previousByte = tmpByte;
+				toSignAndSignature[tmpByte+(255*overflow)] = 0;
+			}
+
+			const signature = toSignAndSignature.slice(toSignAndSignature.length-96-1, toSignAndSignature.length-32-1);
+			console.log("signature len ",signature.length);
+			const data = toSignAndSignature.slice(0,toSignAndSignature.length-96-1);
+			console.log("data len ",data.length);
+
+			const bPubKey = Buffer.from(pubKey);
+			const bSignature = Buffer.from(signature);
+			const bData = Buffer.from(data);
+					console.log("tx hash....")
+					let txHash = Buffer.from(sha.sha3_256(bData),'HEX');
+					isValid = ed25519.Verify(txHash, Buffer.from(signature), Buffer.from(pubKey));
+					console.log("isvalid", isValid)
+
+			let toPrint = "";
+					for(let a of signature){
+						toPrint+=a+" ";
+					}
+					console.log(toPrint);
+			for(let a of message){
+				toPrint+=a+" ";
+			}
+
+			//console.log(toByteArray(message.toString('he{}x')));
             //console.log(remote);
 			//console.log('MESSAGE HEX', message.length, message);
 			// let msg = JSON.parse(message.toString())
