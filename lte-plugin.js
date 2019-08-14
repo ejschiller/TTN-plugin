@@ -95,7 +95,8 @@ function toByteArray(hexString) {
 }
 server.on('message', function(message, remote) {
 	//console.log(remote.address + ':' + remote.port +' - ' + message2);
-	if(true){
+	console.log("length", message.length)
+	if(false){
 		try {
             IoTAddress = remote.address;
             IoTPort = remote.port;
@@ -109,6 +110,8 @@ server.on('message', function(message, remote) {
 			const nrOfZeros = (msg[0] - 1);
 			console.log("ZEROS -> ", nrOfZeros);
 			const zerosPosition = msg.slice(1, nrOfZeros + 1);
+
+
             console.log("Zero length", zerosPosition.length, "---> Zero Positions ", zerosPosition);
             const toSignAndSignature =  msg.slice(1+ nrOfZeros, msg.length-64);
             console.log("toSignAndSignature len", toSignAndSignature.length);
@@ -134,24 +137,29 @@ server.on('message', function(message, remote) {
 			console.log("signature len ",signature.length);
 			const data = toSignAndSignature.slice(0,toSignAndSignature.length-96-1);
 			console.log("data len ",data.length);
-
-			const bPubKey = Buffer.from(pubKey);
+			let hardCodedWPK = [103, 39, 245, 29, 180, 20, 70, 224, 64, 38, 31, 91, 8, 141, 50, 148, 74, 224, 178, 225, 169, 244, 123, 236, 151, 62, 207, 117, 150, 236, 214, 154];
+			let hardCodedPK = [162, 176, 158, 253, 164, 70, 217, 220, 79, 212, 142, 7, 19, 48, 87, 180, 171, 215, 55, 169, 24, 3, 239, 55, 116, 105, 90, 128, 200, 107, 254, 22];
+			const bPubKey = Buffer.from(hardCodedPK);
 			const bSignature = Buffer.from(signature);
-			const bData = Buffer.from(data);
-					console.log("tx hash....")
+			const test = Buffer.from(data);
+			let WPKtoHash = data.slice(0,32);
+			let PKtoHash = data.slice(32,64);
+			let toPrint = "";
+
+			//console.log("DATA",data);
+
+			const bData = Buffer.from(data,'HEX');
+
+				console.log("tx hash....")
 					let txHash = Buffer.from(sha.sha3_256(bData),'HEX');
 					isValid = ed25519.Verify(txHash, Buffer.from(signature), Buffer.from(pubKey));
 					console.log("isvalid", isValid)
 
-			let toPrint = "";
-					for(let a of signature){
-						toPrint+=a+" ";
-					}
-					console.log(toPrint);
-			for(let a of message){
+
+			for(let a of data){
 				toPrint+=a+" ";
 			}
-
+			console.log(toPrint)
 			//console.log(toByteArray(message.toString('he{}x')));
             //console.log(remote);
 			//console.log('MESSAGE HEX', message.length, message);
