@@ -5,8 +5,8 @@
 
 SixfabCellularIoT node;
 
-char your_ip[] = "213.55.171.139"; // change with your ip
-char your_port[] = "5001"; // change with your port
+char your_ip[] = "X.X.X.X"; // change with your ip
+char your_port[] = "5000"; // change with your port
 
 //STATES
 const int SEND_DATA = 0;
@@ -31,18 +31,19 @@ byte hash[32];
 byte byteTxCnt[4];
 byte byteTxFee[8];
 
-int delayTime = 1000; //Delay in ms
+int delayTime = 10000; //Delay in ms
+bool retrieveKeypair = false;
 
 //FLAGS
 const uint8_t PUB_KEY = 70;
 const uint8_t DATA = 83;
 const uint8_t SIGNATURE = 84;
 
-const int sizeData = 250;
+const int sizeData = 100;
 int counterData = 0;
 uint8_t data[sizeData];              //signed data
-char wP[2200];
-char prova[4];
+char request[2000];
+char buff[4];
 const int sizeTx = sizeof(walletPubKey)+sizeof(publicKey)+sizeof(byteTxCnt)+sizeof(byteTxFee)+sizeof(Header)+sizeof(data);
       byte toSign[sizeTx];
 
@@ -53,22 +54,22 @@ void setup() {
   STATE = COLLECT_DATA;
 
   //Check if private Key is already stored, if not generate one
-  if(false){
-  if(EEPROM.read ( 0 )==0 && EEPROM.read ( 1 ) == 0 ){
-      Serial.println("NO PRIVATE KEY FOUND, GENERATING ONE...");
-      Ed25519::generatePrivateKey(privateKey);
-      for ( int i = 0; i < 32; ++i ){
-        EEPROM.write ( i, privateKey [ i ] );
-      }
-   }else{
-      Serial.println("PRIVATE KEY FOUND");
-        for (int i = 0; i < 32; ++i ){
-          privateKey[i] = EEPROM.read ( i );
+  if(retrieveKeypair){
+    if(EEPROM.read ( 0 )==0 && EEPROM.read ( 1 ) == 0 ){
+        Serial.println("NO PRIVATE KEY FOUND, GENERATING ONE...");
+        Ed25519::generatePrivateKey(privateKey);
+        for ( int i = 0; i < 32; ++i ){
+          EEPROM.write ( i, privateKey [ i ] );
         }
-    }
+     }else{
+        Serial.println("PRIVATE KEY FOUND");
+          for (int i = 0; i < 32; ++i ){
+            privateKey[i] = EEPROM.read ( i );
+          }
+      }
 
-    //Derive the public key from the private key
-    Ed25519::derivePublicKey(publicKey, privateKey);
+      //Derive the public key from the private key
+      Ed25519::derivePublicKey(publicKey, privateKey);
   }
 
     SHA3_256* sha = new SHA3_256();
@@ -136,10 +137,8 @@ void collectData(){
 }
 
 void sendData(){
+
       SHA3_256* sha = new SHA3_256();
-
-
-      memset(toSign, 0, sizeof(wP));
       byteTxCnt[0] = txCnt>>24&0xFF;
       byteTxCnt[1] = txCnt>>16&0xFF;
       byteTxCnt[2] = txCnt>>8&0xFF;
@@ -154,111 +153,111 @@ void sendData(){
       byteTxFee[6] = txFee>>8&0xFF;
       byteTxFee[7] = txFee>>0&0xFF;
 
-
-      memset(wP, 0, sizeof(wP));
-      memset(prova, 0, sizeof(prova));
-      strcat(wP,"{");
+      memset(toSign, 0, sizeof(toSign));
+      memset(request, 0, sizeof(request));
+      memset(buff, 0, sizeof(buff));
+      strcat(request,"{");
       sha->update(walletPubKey,sizeof(walletPubKey));
       sha->finalize(hash,sizeof(hash));
 
       int start = 0;
-      strcat(wP,"\"To\":");
+      strcat(request,"\"To\":");
       for (int i = start; i < sizeof(hash); i++ ){
         toSign[i] = hash[i];
                 if(i == start){
-                      sprintf(prova, "[%d,", walletPubKey[i]);
+                      sprintf(buff, "[%d,", walletPubKey[i]);
 
                 }else if( i == sizeof(hash)-1){
-                      sprintf(prova, "%d],", walletPubKey[i]);
+                      sprintf(buff, "%d],", walletPubKey[i]);
 
                 }else {
-                      sprintf(prova, "%d,", walletPubKey[i]);
+                      sprintf(buff, "%d,", walletPubKey[i]);
                 }
-                strcat(wP, prova);
-                memset(prova, 0, sizeof(prova));
+                strcat(request, buff);
+                memset(buff, 0, sizeof(buff));
       }
 
 
       sha->reset();
       sha->update(publicKey,sizeof(publicKey));
       sha->finalize(hash,sizeof(hash));
-      strcat(wP,"\"From\":");
+      strcat(request,"\"From\":");
       start = sizeof(hash);
       for (int i = start; i < start + sizeof(hash); i++ ){
         toSign[i] = hash[i-start];
                  if(i == start){
-                      sprintf(prova, "[%d,", publicKey[i-start]);
+                      sprintf(buff, "[%d,", publicKey[i-start]);
 
                 }else if( i == start + sizeof(hash)-1){
-                      sprintf(prova, "%d],", publicKey[i-start]);
+                      sprintf(buff, "%d],", publicKey[i-start]);
 
                 }else {
-                      sprintf(prova, "%d,", publicKey[i-start]);
+                      sprintf(buff, "%d,", publicKey[i-start]);
                 }
-                strcat(wP, prova);
-                memset(prova, 0, sizeof(prova));
+                strcat(request, buff);
+                memset(buff, 0, sizeof(buff));
       }
 
       sha->reset();
-       strcat(wP,"\"TxCnt\":");
+       strcat(request,"\"TxCnt\":");
 
       start = start + sizeof(hash);
       for (int i = start; i < start + sizeof(byteTxCnt); i++ ){
         toSign[i] = byteTxCnt[i-start];
         if(i == start){
-                      sprintf(prova, "[%d,", byteTxCnt[i-start]);
+                      sprintf(buff, "[%d,", byteTxCnt[i-start]);
 
                 }else if( i == start + sizeof(byteTxCnt)-1){
-                      sprintf(prova, "%d],", byteTxCnt[i-start]);
+                      sprintf(buff, "%d],", byteTxCnt[i-start]);
 
                 }else {
-                      sprintf(prova, "%d,", byteTxCnt[i-start]);
+                      sprintf(buff, "%d,", byteTxCnt[i-start]);
                 }
-                strcat(wP, prova);
-                memset(prova, 0, sizeof(prova));
+                strcat(request, buff);
+                memset(buff, 0, sizeof(buff));
       }
-         strcat(wP,"\"TxFee\":");
+         strcat(request,"\"TxFee\":");
 
       start = start + sizeof(byteTxCnt);
       for (int i = start; i < start + sizeof(byteTxFee); i++ ){
         toSign[i] = byteTxFee[i-start];
                 if(i == start){
-                      sprintf(prova, "[%d,", byteTxFee[i-start]);
+                      sprintf(buff, "[%d,", byteTxFee[i-start]);
 
                 }else if( i == start + sizeof(byteTxFee)-1){
-                      sprintf(prova, "%d],", byteTxFee[i-start]);
+                      sprintf(buff, "%d],", byteTxFee[i-start]);
 
                 }else {
-                      sprintf(prova, "%d,", byteTxFee[i-start]);
+                      sprintf(buff, "%d,", byteTxFee[i-start]);
                 }
-                strcat(wP, prova);
-                memset(prova, 0, sizeof(prova));
+                strcat(request, buff);
+                memset(buff, 0, sizeof(buff));
       }
-           strcat(wP,"\"Header\":");
+           strcat(request,"\"Header\":");
 
       start = start + sizeof(byteTxFee);
       for (int i = start; i < start+sizeof(Header); i++ ){
         toSign[i] = Header;
-                      sprintf(prova, "%d,", Header);
-                strcat(wP, prova);
-                memset(prova, 0, sizeof(prova));
+                      sprintf(buff, "%d,", Header);
+                strcat(request, buff);
+                memset(buff, 0, sizeof(buff));
       }
-           strcat(wP,"\"Data\":");
+           strcat(request,"\"Data\":");
 
       start = start + 1;
       for (int i = start; i < start +sizeof(data); i++ ){
         toSign[i] = data[i-start];
                         if(i == start){
-                      sprintf(prova, "[%d,", data[i-start]);
+                      sprintf(buff, "[%d,", data[i-start]);
 
                 }else if( i == start + sizeof(data)-1){
-                      sprintf(prova, "%d],", data[i-start]);
+                      sprintf(buff, "%d],", data[i-start]);
 
                 }else {
-                      sprintf(prova, "%d,", data[i-start]);
+                      sprintf(buff, "%d,", data[i-start]);
                 }
-                strcat(wP, prova);
-                memset(prova, 0, sizeof(prova));
+                strcat(request, buff);
+                memset(buff, 0, sizeof(buff));
       }
 
      sha->update(toSign,sizeof(toSign));
@@ -269,38 +268,31 @@ void sendData(){
 
     Ed25519::sign(signature, privateKey, publicKey, hash, sizeof(hash));
 
-               strcat(wP,"\"Signature\":");
+               strcat(request,"\"Signature\":");
 
     for(int k =0; k<sizeof(signature);k++){
        if(k == 0){
-                      sprintf(prova, "[%d,", signature[k]);
+                      sprintf(buff, "[%d,", signature[k]);
 
                 }else if( k == sizeof(signature)-1){
-                      sprintf(prova, "%d]}", signature[k]);
+                      sprintf(buff, "%d]}", signature[k]);
 
                 }else {
-                      sprintf(prova, "%d,", signature[k]);
+                      sprintf(buff, "%d,", signature[k]);
                 }
-                strcat(wP, prova);
-                memset(prova, 0, sizeof(prova));
+                strcat(request, buff);
+                memset(buff, 0, sizeof(buff));
       }
-    Serial.println("TRANSACTION SIGNED");
-    //node.sendDataUDP(walletPubKey);
-    Serial.println("TO SIGN BUFFER");
-    for(int z = 0; z<sizeof(toSign);z++){
-      Serial.print(toSign[z]);Serial.print(" ");
-      }
-          node.sendDataUDP(wP);
-          Serial.print("\nSIZE OF DATA\n");
-          Serial.println(sizeof(toSign)+64);
+
+          node.sendDataUDP(request);
 
     //TODO update only if transaction is successfull
     txCnt = txCnt + 1;
 
 
 
-    memset(wP, 0, sizeof(wP));
-    memset(prova, 0, sizeof(prova));
+    memset(request, 0, sizeof(request));
+    memset(buff, 0, sizeof(buff));
 
       STATE = RESET_ALL_DATA;
   }
@@ -309,10 +301,12 @@ void sendData(){
 void resetAllData(){
   //TODO RESET ALL DATA FOR COLLECT
     memset(data, 0, sizeof(data));
-    memset(wP, 0, sizeof(wP));
+    memset(request, 0, sizeof(request));
+    memset(toSign, 0, sizeof(toSign));
+
     counterData = 0;
     STATE = COLLECT_DATA;
-    delay(5000);
+    delay(delayTime);
   }
 
 uint8_t getDataFromSensor(){
