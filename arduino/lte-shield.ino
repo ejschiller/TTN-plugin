@@ -251,14 +251,12 @@ void sendData(){
               }
         }
 
-    Serial.print("LENGTH OF TO_SEND ");
-    Serial.println(sizeof(sigTx));
     to_send = send_convert(sigTx, sizeof(sigTx));
 
     node.sendDataUDP(to_send);
     free(to_send);
 
-    //TODO update only if transaction is successfull
+    //TODO update only if transaction is successful
     txCnt = txCnt + 1;
 
     Serial.println("TRANSACTION SENT");
