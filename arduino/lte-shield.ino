@@ -5,8 +5,8 @@
 
 SixfabCellularIoT node;
 
-char your_ip[] = "213.55.171.139"; // change with your ip
-char your_port[] = "5001"; // change with your port
+char your_ip[] = "X.X.X.X"; // change with your ip
+char your_port[] = "5000"; // change with your port
 
 //STATES
 const int SEND_DATA = 0;
@@ -23,7 +23,7 @@ uint64_t txFee = 2;
 byte Header = 0;
 
 //VARIABLES
- uint8_t privateKey[32] = {129, 249, 46, 107, 251, 165, 231, 35, 72, 100, 82, 46, 42, 8, 2, 239, 96, 243, 143, 42, 228, 21, 248, 165, 178, 181, 180, 57, 34, 188, 223, 170};
+uint8_t privateKey[32] = {129, 249, 46, 107, 251, 165, 231, 35, 72, 100, 82, 46, 42, 8, 2, 239, 96, 243, 143, 42, 228, 21, 248, 165, 178, 181, 180, 57, 34, 188, 223, 170};
 uint8_t publicKey[32] = {162, 176, 158, 253, 164, 70, 217, 220, 79, 212, 142, 7, 19, 48, 87, 180, 171, 215, 55, 169, 24, 3, 239, 55, 116, 105, 90, 128, 200, 107, 254, 22};
 uint8_t signature[64];
 
@@ -114,14 +114,12 @@ void loop() {
 void do_send() {
     switch(STATE){
         case COLLECT_DATA:
-            //Serial.println("COLLECT DATA");
             collectData();
             break;
         case SEND_DATA:
             sendData();
             break;
         case RESET_ALL_DATA:
-            Serial.println("RESET ALL DATA");
             resetAllData();
             break;
     }
@@ -129,7 +127,6 @@ void do_send() {
 
 
 void collectData(){
-  //Serial.println("COLLECT DATA");
   data[counterData++] = getDataFromSensor();
     if(counterData>=sizeData){
         STATE = SEND_DATA;
@@ -172,7 +169,6 @@ uint8_t* send_convert(uint8_t* str, int len) {
 }
 
 void sendData(){
-
       SHA3_256* sha = new SHA3_256();
       byteTxCnt[0] = txCnt>>24&0xFF;
       byteTxCnt[1] = txCnt>>16&0xFF;
@@ -255,34 +251,22 @@ void sendData(){
               }
         }
 
-      Serial.print("LENGTH OF TO_SEND ");
+    Serial.print("LENGTH OF TO_SEND ");
     Serial.println(sizeof(sigTx));
-            to_send = send_convert(sigTx, sizeof(sigTx));
+    to_send = send_convert(sigTx, sizeof(sigTx));
 
-    //TODO concat signature + toSign
-            Serial.print("\n\n");
-            for(int ile=0; ile < sizeof(sigTx); ile++){
-               Serial.print(sigTx[ile]);
-               Serial.print(" ");
-              }
-           Serial.print("\n\n");
-
-
-                node.sendDataUDP(to_send);
-                  free(to_send);
-
+    node.sendDataUDP(to_send);
+    free(to_send);
 
     //TODO update only if transaction is successfull
     txCnt = txCnt + 1;
 
-
     Serial.println("TRANSACTION SENT");
-      STATE = RESET_ALL_DATA;
-  }
+    STATE = RESET_ALL_DATA;
+}
 
 
 void resetAllData(){
-  //TODO RESET ALL DATA FOR COLLECT
     memset(data, 0, sizeof(data));
     memset(toSign, 0, sizeof(toSign));
 
